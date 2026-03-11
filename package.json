@@ -10,10 +10,11 @@
     "prisma:push": "dotenv -e .development.env -- prisma db push --schema ./src/prisma/schema.prisma",
     "prisma:studio": "dotenv -e .development.env -- prisma studio --schema ./src/prisma/schema.prisma",
     "seed": "dotenv -e .development.env -- prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema ./src/prisma/schema.prisma"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} src/prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} src/prisma/seed.ts",
+    "schema": "./src/prisma/schema.prisma"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.4.2",
