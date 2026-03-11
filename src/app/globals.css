@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #cdd1d5;
+    --secondary: #e3e31b;
+    --primary: #6a64e8;
+    --turquoise: #55aaaa;
+    --muted: #d0d0d0;
+    --muted-foreground: #9a9a9a;
+    --destructive: #da0000;
+  }
+  body {
+    @apply text-root font-normal text-black;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-6;
+  }
+  .container-sm {
+    @apply mx-auto w-full max-w-[800px] px-5 sm:px-6;
+  }
+  .text-sm1 {
+    /*0.875-1.25rem 14-20px */
+    @apply text-[0.875rem] leading-[1.25rem];
+  }
+  .text-root {
+    @apply text-[0.875rem] leading-[1.25rem] sm:text-base; /*1-1.5rem 16-24px */
+  }
+  .text-lg1 {
+    /*1.25-1.75rem 18-28px */
+    @apply text-base sm:text-[1.25rem] sm:leading-[1.75rem];
+  }
+  .text-h3 {
+    /*1.5-2rem 24-32px */
+    @apply text-[1.25rem] leading-[1.75rem] sm:text-[1.5rem] sm:leading-[2rem];
+  }
+  .text-h2 {
+    /*2-2.625rem 32-42px */
+    @apply text-[1.5rem] leading-[2rem] sm:text-[2rem] sm:leading-[2.625rem];
+  }
+  .text-h1 {
+    /*3-3.5rem 48-56px */
+    @apply text-[2rem] leading-[2.625rem] sm:text-[3rem] sm:leading-[3.5rem];
+  }
+  .paper-sharp {
+    @apply border border-gray-300 bg-white p-4 shadow-md;
+  }
+  .paper-rounded {
+    @apply rounded-[8px] border border-gray-300 bg-white p-4 shadow-md;
+  }
+  .border-box {
+    @apply border border-black;
+  }
+  .paper-blue {
+    @apply border-[2px] border-white bg-[#ecf7fe];
+  }
+
+  /* Custom Swiper Styles for Home Slider */
+
+  .home-slider .swiper-button-next,
+  .home-slider .swiper-button-prev {
+    @apply h-10 w-10 rounded-full bg-white/20 text-white shadow-sm backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/40;
+    svg {
+      width: 13px;
+      height: auto;
+      display: block;
+    }
+  }
+  .home-slider .swiper-button-next:after,
+  .home-slider .swiper-button-prev:after {
+    @apply font-bold;
+    font-size: 13px;
+  }
+  .home-slider .swiper-pagination-bullet {
+    @apply h-2.5 w-2.5 bg-white/50 opacity-100 transition-all duration-300 hover:bg-white/80;
+  }
+  .home-slider .swiper-pagination-bullet-active {
+    @apply w-8 rounded-full bg-white;
+  }
+  .home-slider .swiper-pagination {
+    @apply bottom-5;
+  }
+}

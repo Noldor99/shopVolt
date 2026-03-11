@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: nextjs_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: my_shop
+    ports:
+      - '5433:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: nextjs_app
+    restart: always
+    profiles:
+      - app
+    ports:
+      - '3000:3000'
+    environment:
+      # Посилання на сервіс 'db' всередині мережі Docker
+      POSTGRES_URL: 'postgresql://user:password@db:5432/my_shop?schema=public'
+    depends_on:
+      - db
+
+volumes:
+  db_data:

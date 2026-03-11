@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_URL") // uses connection pooling
+  directUrl = env("PRISMA_DATABASE_URL") // uses a direct connection
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  fullName String
+  email    String  @unique
+  phone    String?
+  password String
+
+  role UserRole @default(USER)
+
+  provider   String?
+  providerId String?
+
+  basket            Basket?
+  orders            Order[]
+  favorites         Favorite[]
+  verificationCodes VerificationCode[]
+
+  verified  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum UserRole {
+  USER
+  MODER
+  ADMIN
+}
+
+model Category {
+  id   Int    @id @default(autoincrement())
+  slug String @unique
+
+  translations CategoryTranslation[]
+  devices      Device[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CategoryTranslation {
+  id     Int    @id @default(autoincrement())
+  name   String
+  locale String
+
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId Int
+
+  @@unique([categoryId, locale])
+}
+
+model Brand {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  devices Device[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Device {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  imageUrl  String
+  imageUrls String[] @default([])
+
+  deviceType DeviceType @default(OTHER)
+
+  priceUah     Int?
+  oldPriceUah  Int?
+  rating       Float?
+  reviewsCount Int?
+  inStock      Boolean @default(true)
+  stockCount   Int?
+
+  translations DeviceTranslation[]
+
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+
+  brand   Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  brandId Int?
+
+  info          DeviceInfo[]
+  basketDevices BasketDevice[]
+  favorites     Favorite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId, brandId])
+  @@index([deviceType])
+  @@index([priceUah])
+  @@index([rating])
+}
+
+model DeviceTranslation {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+  locale      String
+
+  seoTitle       String?
+  seoDescription String?
+
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId Int
+
+  @@unique([deviceId, locale])
+}
+
+model DeviceInfo {
+  id Int @id @default(autoincrement())
+
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId Int
+
+  translations DeviceInfoTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deviceId])
+}
+
+model DeviceInfoTranslation {
+  id     Int    @id @default(autoincrement())
+  key    String
+  value  String
+  locale String
+
+  deviceInfo   DeviceInfo @relation(fields: [deviceInfoId], references: [id], onDelete: Cascade)
+  deviceInfoId Int
+
+  @@unique([deviceInfoId, locale])
+}
+
+model Basket {
+  id Int @id @default(autoincrement())
+
+  user   User? @relation(fields: [userId], references: [id])
+  userId Int?  @unique
+
+  tokenId String? @unique
+
+  devices     BasketDevice[]
+  totalAmount Int            @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BasketDevice {
+  id Int @id @default(autoincrement())
+
+  basket   Basket @relation(fields: [basketId], references: [id], onDelete: Cascade)
+  basketId Int
+
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  deviceId Int
+
+  quantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([basketId, deviceId])
+  @@index([deviceId])
+}
+
+model Favorite {
+  id Int @id @default(autoincrement())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, deviceId])
+}
+
+enum DeviceType {
+  TABLET
+  MONITOR
+  OTHER
+}
+
+model Order {
+  id Int @id @default(autoincrement())
+
+  user   User? @relation(fields: [userId], references: [id])
+  userId Int?
+
+  items Json?
+
+  status      OrderStatus @default(PENDING)
+  totalAmount Int
+  paymentId   String?
+
+  fullName String
+  address  String
+  email    String
+  phone    String
+  comment  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  SUCCEEDED
+  CANCELLED
+}
+
+model VerificationCode {
+  id Int @id @default(autoincrement())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+  code   String
+
+  expiresAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, code])
+}
