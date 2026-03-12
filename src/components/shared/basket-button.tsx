@@ -1,7 +1,7 @@
 'use client'
 
 import { useGetBasket } from '@/ahooks/useBasket'
-import { ArrowRight, ShoppingBasket } from 'lucide-react'
+import { ShoppingBasket } from 'lucide-react'
 
 import React, { useEffect, useMemo, useState } from 'react'
 
@@ -40,13 +40,25 @@ export const BasketButton: React.FC<Props> = ({ className }) => {
     <BasketDrawer>
       <Button
         loading={loading}
-        className={cn('group relative', { 'w-[105px]': loading }, className)}
+        variant="black_out"
+        size="icon"
+        className={cn('relative', className)}
       >
-        <div className="flex items-center gap-1 transition duration-300 group-hover:opacity-0">
-          <ShoppingBasket className="relative h-4 w-4" strokeWidth={2} />
-          <b>{itemsCount}</b>
-        </div>
-        <ArrowRight className="absolute right-5 w-5 -translate-x-2 opacity-0 transition duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
+        <ShoppingBasket className="h-5 w-5" strokeWidth={2} />
+        {itemsCount > 0 && (
+          <span
+            className={cn(
+              'absolute -right-2 -top-2 z-20',
+              'flex h-5 min-w-[20px] items-center justify-center rounded-full',
+              'bg-black text-white',
+              'text-[11px] font-bold italic leading-none',
+              'shadow-lg ring-2 ring-background',
+              'px-1'
+            )}
+          >
+            {itemsCount > 99 ? '99+' : itemsCount}
+          </span>
+        )}
       </Button>
     </BasketDrawer>
   )

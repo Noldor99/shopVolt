@@ -1,13 +1,16 @@
-"use client"
+'use client'
 
-import { useState } from "react"
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
-import { IconMenuDeep } from "@tabler/icons-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
+import { useState } from 'react'
+
+import { IconMenuDeep } from '@tabler/icons-react'
+
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+
+import { cn } from '@/lib/utils'
 
 type SheetHeaderPropsType = {
   nav: { name: string; url: string }[]
@@ -25,7 +28,7 @@ export const SheetHeader = ({ nav }: SheetHeaderPropsType) => {
           className="size-10 rounded-xl border-black/30 bg-white p-0 shadow-sm xl:hidden"
           variant="black_out"
         >
-          <IconMenuDeep size={"22px"} />
+          <IconMenuDeep size={'22px'} />
         </Button>
       </SheetTrigger>
       <SheetContent className="!w-full !max-w-full bg-white px-6 pb-8 pt-14 sm:!max-w-sm">
@@ -41,9 +44,9 @@ export const SheetHeader = ({ nav }: SheetHeaderPropsType) => {
               key={idx}
               onClick={handleToggle}
               className={cn(
-                "block rounded-xl border border-black/10 px-4 py-3 text-base font-semibold tracking-wide transition hover:border-black/30 hover:bg-black/5",
+                'block rounded-xl border border-black/10 px-4 py-3 text-base font-semibold tracking-wide transition hover:border-black/30 hover:bg-black/5',
                 pathname === url &&
-                  "rounded-xl border border-black bg-black px-4 py-3 text-base font-semibold tracking-wide text-white"
+                  'rounded-xl border border-black bg-black px-4 py-3 text-base font-semibold tracking-wide text-white'
               )}
             >
               {name}

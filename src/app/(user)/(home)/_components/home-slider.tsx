@@ -46,7 +46,7 @@ export const HomeSlider = ({ slides }: HomeSliderProps) => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent sm:bg-gradient-to-r sm:from-black/80 sm:via-black/40 sm:to-transparent" />
 
-              <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 md:p-14 text-white">
+              <div className="absolute inset-0 flex flex-col justify-end p-6 pb-14 sm:p-10 md:p-14 text-white">
                 <div className="max-w-[600px] animate-in fade-in slide-in-from-bottom-4 duration-1000">
                   {slide.subtitle && (
                     <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-yellow-400 sm:text-sm">

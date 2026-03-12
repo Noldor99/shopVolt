@@ -120,6 +120,9 @@ const getDetectedFeatures = (title?: string) => {
 async function down() {
   console.log("Cleaning database...");
   // Видаляємо в правильному порядку (спочатку залежні таблиці)
+  await prisma.basketDevice.deleteMany();
+  await prisma.favorite.deleteMany();
+  await prisma.basket.deleteMany();
   await prisma.deviceInfoTranslation.deleteMany();
   await prisma.deviceInfo.deleteMany();
   await prisma.deviceTranslation.deleteMany();

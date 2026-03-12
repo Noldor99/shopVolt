@@ -3,10 +3,11 @@ import { prisma } from '@/prisma/prisma-client'
 import { type ReactNode } from 'react'
 
 import { TopBar } from '@/components/layout/top-bar'
+import { TopSubBar } from '@/components/layout/top-sub-bar'
 import { Container } from '@/components/ui/container'
 import { Title } from '@/components/ui/title'
+
 import { localizeCategoryName } from '@/lib/localize-entities'
-import { getMessages } from '@/lib/i18n'
 import { getServerLocale } from '@/lib/server-locale'
 
 type MainLayoutProps = {
@@ -27,7 +28,7 @@ type CategoryQueryItem = {
 
 const MainLayout = async ({ children }: MainLayoutProps) => {
   const locale = await getServerLocale()
-  const t = getMessages(locale)
+
   const categories = await prisma.category.findMany({
     select: {
       id: true,
@@ -46,9 +47,7 @@ const MainLayout = async ({ children }: MainLayoutProps) => {
   return (
     <>
       <div className="width-max relative z-0 bg-white">
-        <Container>
-          <Title size="3xl" text={t.common.allParameters} className="font-bold" />
-        </Container>
+        <TopSubBar />
       </div>
       <TopBar
         categories={categories

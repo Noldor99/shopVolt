@@ -14,7 +14,7 @@ const CATEGORY_BY_SLUG: Record<string, Record<Locale, string>> = {
 const INFO_LABELS: Record<string, Record<Locale, string>> = {
   brand: { ua: 'Бренд', en: 'Brand' },
   ram: { ua: "Оперативна пам'ять", en: 'RAM' },
-  storage: { ua: "Вбудована пам'ять", en: 'Storage' },
+  storage: { ua: "Внутрішня пам'ять", en: 'Internal storage' },
   os: { ua: 'Операційна система', en: 'Operating system' },
   matrix: { ua: 'Тип матриці', en: 'Panel type' },
   processor: { ua: 'Процесор', en: 'Processor' },

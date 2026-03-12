@@ -3,7 +3,7 @@
 import { MONITOR_FILTERS, TABLET_FILTERS } from '@/constants/tabletFilters'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { stripLocaleFromPathname } from '@/lib/i18n'
+import { getLocaleFromPathname, stripLocaleFromPathname } from '@/lib/i18n'
 import { localizeInfoLabel } from '@/lib/localize-entities'
 
 import { usePriceFilters } from '@/hooks/use-price-filters'
@@ -20,6 +20,7 @@ export const useDeviceFilters = () => {
   const [serverFilters, setServerFilters] = useState<IDeviceFiltersResponse | null>(null)
 
   const { minPrice, maxPrice, minLimit, maxLimit } = usePriceFilters(pathname)
+  const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname])
   const categorySlug = useMemo(() => {
     const cleanPathname = stripLocaleFromPathname(pathname)
     return cleanPathname.split('/category/')[1]?.split('/')[0] ?? null
@@ -41,7 +42,9 @@ export const useDeviceFilters = () => {
       }
 
       try {
-        const res = await fetch(`/api/devices/filters?categorySlug=${encodeURIComponent(categorySlug)}`)
+        const res = await fetch(
+          `/api/devices/filters?categorySlug=${encodeURIComponent(categorySlug)}&lang=${locale}`
+        )
         if (!res.ok) throw new Error('Failed to load filters')
         const payload = (await res.json()) as IDeviceFiltersResponse
         setServerFilters(payload)
@@ -51,15 +54,13 @@ export const useDeviceFilters = () => {
     }
 
     void loadFilters()
-  }, [categorySlug])
+  }, [categorySlug, locale])
 
   const activeFilters = useMemo(() => {
-    // Tablets should always show the full static filter set from constants.
-    if (!isMonitorCategory) return baseFilters
-
     if (!serverFilters) return baseFilters
 
     const infoMap = serverFilters?.info ?? {}
+    const hasServerInfoOptions = Object.keys(infoMap).length > 0
     const brands = serverFilters?.brands?.map((item) => item.name).filter(Boolean) ?? []
 
     const resolved: FilterConfig[] = baseFilters.map((filter) => {
@@ -81,7 +82,12 @@ export const useDeviceFilters = () => {
 
       return {
         ...filter,
-        options: uniqueDynamicOptions.length ? uniqueDynamicOptions : [],
+        options:
+          uniqueDynamicOptions.length > 0
+            ? uniqueDynamicOptions
+            : hasServerInfoOptions || isMonitorCategory
+              ? []
+              : filter.options,
       }
     })
 
@@ -97,7 +103,10 @@ export const useDeviceFilters = () => {
         ]
         : []
 
-    return [...brandFilter, ...resolved].filter((filter) => filter.options.length > 0)
+    const mergedFilters = [...brandFilter, ...resolved]
+    return hasServerInfoOptions || isMonitorCategory
+      ? mergedFilters.filter((filter) => filter.options.length > 0)
+      : mergedFilters
   }, [baseFilters, isMonitorCategory, serverFilters])
 
   const { isSectionOpen, toggleSection } = useAccordion([])

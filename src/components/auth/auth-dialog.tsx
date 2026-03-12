@@ -4,6 +4,8 @@ import { useSession } from 'next-auth/react'
 
 import { useState } from 'react'
 
+import { IconUser } from '@tabler/icons-react'
+
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -35,7 +37,9 @@ export function AuthDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="black_out">Увійти</Button>
+        <Button variant="black_out" size="icon" className="rounded-full">
+          <IconUser size={20} strokeWidth={2} />
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

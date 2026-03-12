@@ -65,7 +65,7 @@
 
   .home-slider .swiper-button-next,
   .home-slider .swiper-button-prev {
-    @apply h-10 w-10 rounded-full bg-white/20 text-white shadow-sm backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/40;
+    @apply hidden sm:flex h-10 w-10 rounded-full bg-white/20 text-white shadow-sm backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/40;
     svg {
       width: 13px;
       height: auto;
