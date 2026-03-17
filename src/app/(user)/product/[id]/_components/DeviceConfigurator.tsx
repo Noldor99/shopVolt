@@ -2,15 +2,13 @@
 
 import { PackageCheck, ShieldCheck, Sparkles, Star, Truck } from 'lucide-react'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 
-import { useQueryClient } from '@tanstack/react-query'
+import { useAddBasketDevice, useCreateBasket, useGetBasket } from '@/ahooks/useBasket'
 
 import { QuantitySelector } from '@/components/shared/QuantitySelector'
 import { Button } from '@/components/ui/button'
-
-import { apiBasket } from '@/actions/client/basketAction'
 
 import { useDeviceGallery } from '@/hooks/useDeviceGallery'
 import { useQuantitySelector } from '@/hooks/useQuantitySelector'
@@ -135,9 +133,20 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
     addError: isEn ? 'Failed to add item to cart' : 'Не вдалося додати товар у кошик',
   }
 
-  const queryClient = useQueryClient()
+  const [tokenId, setTokenId] = useState('')
+  useEffect(() => {
+    setTokenId(getOrCreateBasketToken())
+  }, [])
+
+  const { data: existingBasket } = useGetBasket({
+    enabled: Boolean(tokenId),
+    params: { tokenId },
+  })
+  const createBasketMutation = useCreateBasket()
+  const addDeviceMutation = useAddBasketDevice()
+
   const { quantity, handleDecrease, handleIncrease, handleChangeInput } = useQuantitySelector(1)
-  const [isAdding, setIsAdding] = useState(false)
+  const isAdding = addDeviceMutation.isPending || createBasketMutation.isPending
 
   const displayName = isEn
     ? (device.name ?? device.nameLocalized ?? device.slug)
@@ -406,39 +415,50 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
     setSelectedItemId(exactMatch?.id ?? fallbackMatch?.id ?? selectedItem?.id ?? null)
   }
 
-  const handleAddToBasket = async () => {
+  const handleAddToBasket = useCallback(async () => {
     try {
-      setIsAdding(true)
-      const tokenId = getOrCreateBasketToken()
+      const currentToken = tokenId || getOrCreateBasketToken()
+      let basket = existingBasket
 
-      let basket = await apiBasket.getOne({ tokenId })
       if (!basket) {
-        basket = await apiBasket.create({ tokenId })
+        basket = await createBasketMutation.mutateAsync({ tokenId: currentToken })
       }
 
-      await apiBasket.addDevice({
-        basketId: basket.id,
-        ...(selectedItem?.id ? { deviceItemId: selectedItem.id } : { deviceId: device.id }),
-        quantity,
-      })
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['basket'] }),
-        queryClient.invalidateQueries({ queryKey: ['basket', { tokenId }] }),
-      ])
-
-      toast.success(
-        selectedVariantSummary
-          ? `${displayName} (${selectedVariantSummary}) ${t.cartAdded}`
-          : `${displayName} ${t.cartAdded}`
+      addDeviceMutation.mutate(
+        {
+          basketId: basket.id,
+          ...(selectedItem?.id ? { deviceItemId: selectedItem.id } : { deviceId: device.id }),
+          quantity,
+        },
+        {
+          onSuccess: () => {
+            toast.success(
+              selectedVariantSummary
+                ? `${displayName} (${selectedVariantSummary}) ${t.cartAdded}`
+                : `${displayName} ${t.cartAdded}`
+            )
+          },
+          onError: () => {
+            toast.error(t.addError)
+          },
+        }
       )
-    } catch (error) {
-      console.error(error)
+    } catch {
       toast.error(t.addError)
-    } finally {
-      setIsAdding(false)
     }
-  }
+  }, [
+    tokenId,
+    existingBasket,
+    createBasketMutation,
+    addDeviceMutation,
+    selectedItem?.id,
+    device.id,
+    quantity,
+    selectedVariantSummary,
+    displayName,
+    t.cartAdded,
+    t.addError,
+  ])
 
   return (
     <div className="grid gap-6 rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-4 shadow-[0_20px_70px_-35px_rgba(15,23,42,0.35)] sm:p-6 lg:grid-cols-[minmax(0,1fr)_460px]">

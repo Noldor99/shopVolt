@@ -1,9 +1,10 @@
-import { queryClient } from "@/lib/queryClient"
+import { getServerQueryClient } from '@/lib/queryClient'
 
-import { QueryDeviceFilterParams, QueryDeviceParams, apiDevice } from "../client/deviceAction"
+import { QueryDeviceFilterParams, QueryDeviceParams, apiDevice } from '../client/deviceAction'
 
 export const devicePrefetch = async (params?: QueryDeviceParams) => {
-  const key = ["device", params ?? {}]
+  const queryClient = getServerQueryClient()
+  const key = ['device', params ?? {}]
   return queryClient.fetchQuery({
     queryKey: key,
     queryFn: () => apiDevice.getAll(params),
@@ -11,7 +12,8 @@ export const devicePrefetch = async (params?: QueryDeviceParams) => {
 }
 
 export const deviceByIdPrefetch = async (id: string | number) => {
-  const key = ["device", id]
+  const queryClient = getServerQueryClient()
+  const key = ['device', id]
   return queryClient.fetchQuery({
     queryKey: key,
     queryFn: () => apiDevice.getOne(id),
@@ -19,7 +21,8 @@ export const deviceByIdPrefetch = async (id: string | number) => {
 }
 
 export const deviceFiltersPrefetch = async (params?: QueryDeviceFilterParams) => {
-  const key = ["device-filter", params ?? {}]
+  const queryClient = getServerQueryClient()
+  const key = ['device-filter', params ?? {}]
   return queryClient.fetchQuery({
     queryKey: key,
     queryFn: () => apiDevice.getFilters(params),

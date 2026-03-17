@@ -1,19 +1,21 @@
-import { queryClient } from '@/lib/queryClient';
+import { getServerQueryClient } from '@/lib/queryClient'
 
-import { QueryOrderParams, apiOrder } from '../client/orderAction';
+import { QueryOrderParams, apiOrder } from '../client/orderAction'
 
 export const orderPrefetch = async (params?: QueryOrderParams) => {
-  const key = ['order', params ?? {}];
+  const queryClient = getServerQueryClient()
+  const key = ['order', params ?? {}]
   return queryClient.fetchQuery({
     queryKey: key,
     queryFn: () => apiOrder.getAll(params),
-  });
-};
+  })
+}
 
 export const orderByIdPrefetch = async (id: string | number) => {
-  const key = ['order', id];
+  const queryClient = getServerQueryClient()
+  const key = ['order', id]
   return queryClient.fetchQuery({
     queryKey: key,
     queryFn: () => apiOrder.getOne(id),
-  });
-};
+  })
+}

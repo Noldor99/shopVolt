@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache'
+
 import { prisma } from '@/prisma/prisma-client'
 
 import { type ReactNode } from 'react'
@@ -5,7 +7,6 @@ import { type ReactNode } from 'react'
 import { TopBar } from '@/components/layout/top-bar'
 import { TopSubBar } from '@/components/layout/top-sub-bar'
 import { Container } from '@/components/ui/container'
-import { Title } from '@/components/ui/title'
 
 import { localizeCategoryName } from '@/lib/localize-entities'
 import { getServerLocale } from '@/lib/server-locale'
@@ -26,23 +27,31 @@ type CategoryQueryItem = {
   translations: Array<{ name: string }>
 }
 
+const getCachedCategories = unstable_cache(
+  async (locale: string) => {
+    return prisma.category.findMany({
+      select: {
+        id: true,
+        slug: true,
+        translations: {
+          where: { locale },
+          select: { name: true },
+          take: 1,
+        },
+      },
+      orderBy: {
+        slug: 'asc',
+      },
+    })
+  },
+  ['home-layout-categories'],
+  { revalidate: 300, tags: ['categories'] }
+)
+
 const MainLayout = async ({ children }: MainLayoutProps) => {
   const locale = await getServerLocale()
 
-  const categories = await prisma.category.findMany({
-    select: {
-      id: true,
-      slug: true,
-      translations: {
-        where: { locale },
-        select: { name: true },
-        take: 1,
-      },
-    },
-    orderBy: {
-      slug: 'asc',
-    },
-  })
+  const categories = await getCachedCategories(locale)
 
   return (
     <>

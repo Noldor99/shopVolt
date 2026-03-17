@@ -1,5 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
+
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'framer-motion',
+      '@tabler/icons-react',
+    ],
+  },
+
   images: {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
