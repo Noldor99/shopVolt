@@ -49,9 +49,9 @@ const MainLayout = async ({ children }: MainLayoutProps) => {
 
       <main className="flex-1">
         <div className="container flex w-full flex-1 items-stretch gap-6 py-6">
-          {/* <Suspense fallback={<FilterSkeleton />}>
+          <Suspense fallback={<FilterSkeleton />}>
             <Filter />
-          </Suspense> */}
+          </Suspense>
           <div className="min-w-0 flex-1">
             <Suspense fallback={<DeviceListSkeleton />}>{children}</Suspense>
           </div>
