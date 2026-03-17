@@ -6,11 +6,8 @@ import React from 'react'
 
 import { Container } from '@/components/ui/container'
 
-import useScroll from '@/hooks/use-scroll'
-
 import {
   getLocaleFromPathname,
-  getMessages,
   stripLocaleFromPathname,
   withLocalePath,
 } from '@/lib/i18n'
@@ -34,18 +31,16 @@ interface Props {
 
 export const TopBar: React.FC<Props> = ({ categories, className }) => {
   const router = useRouter()
-  const cartVisible = useScroll(3)
   const pathname = usePathname()
 
   const locale = getLocaleFromPathname(pathname)
-  const t = getMessages(locale)
   const cleanPathname = stripLocaleFromPathname(pathname)
   const isCategoryPage = cleanPathname.startsWith('/category/')
 
   // Знаходимо поточну активну категорію на основі URL
   // Припускаємо, що URL має вигляд /category/slug
   const activeSlug = cleanPathname.split('/')[2]
-  const totalFound = useCategoryTotal(categories)
+  const totalFound = useCategoryTotal()
 
   // Перетворюємо категорії у формат, який очікує FilterTogleGroup
   const filterItems = categories.map((cat) => ({

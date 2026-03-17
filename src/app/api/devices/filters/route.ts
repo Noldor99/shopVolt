@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 
 import { localizeCategoryName, localizeInfoLabel } from "@/lib/localize-entities"
 import { resolveLocaleFromRequest } from "@/lib/request-locale"
@@ -19,6 +20,25 @@ type ValueTranslationLike = {
   locale: string
   value: string
 }
+
+type DeviceInfoFilterRow = Prisma.DeviceInfoGetPayload<{
+  include: {
+    categoryAttribute: {
+      include: {
+        attribute: {
+          include: {
+            translations: true
+          }
+        }
+      }
+    }
+    attributeValue: {
+      include: {
+        translations: true
+      }
+    }
+  }
+}>
 
 const getPreferredTranslation = <T extends { locale: string }>(items: T[], locale: string) =>
   items.find((item) => item.locale === locale) ??
@@ -48,7 +68,7 @@ export async function GET(req: NextRequest) {
   }
   if (brandId) where.brandId = brandId
 
-  const [brands, categories, infoRows, priceRange] = await Promise.all([
+  const [brands, categories, infoRows, priceRange, total] = await Promise.all([
     prisma.brand.findMany({
       where: {
         devices: {
@@ -105,10 +125,13 @@ export async function GET(req: NextRequest) {
         priceUah: true,
       },
     }),
+    prisma.device.count({
+      where,
+    }),
   ])
 
   const groupedInfo = infoRows.reduce<Record<string, string[]>>(
-    (acc: Record<string, string[]>, row: any) => {
+    (acc: Record<string, string[]>, row: DeviceInfoFilterRow) => {
       const keyTranslation = getPreferredTranslation<AttributeTranslationLike>(
         row.categoryAttribute?.attribute?.translations ?? [],
         locale
@@ -150,5 +173,6 @@ export async function GET(req: NextRequest) {
       min: priceRange._min.priceUah ?? null,
       max: priceRange._max.priceUah ?? null,
     },
+    total,
   })
 }

@@ -1,9 +1,13 @@
 'use client'
 
-import { MONITOR_FILTERS, TABLET_FILTERS } from '@/constants/tabletFilters'
+import { useQuery } from '@tanstack/react-query'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
-import { getLocaleFromPathname, getMessages, stripLocaleFromPathname } from '@/lib/i18n'
+
+import { apiDevice } from '@/actions/client/deviceAction'
+import { getLocaleFromPathname, getMessages } from '@/lib/i18n'
+
+import { getDeviceFilterParams, getDeviceFilterQueryKey } from './shared'
 
 type ChipItem = {
   key: string
@@ -17,16 +21,22 @@ export const useTopBarFilterChips = () => {
   const searchParams = useSearchParams()
   const locale = getLocaleFromPathname(pathname)
   const t = getMessages(locale)
+  const filterParams = useMemo(() => getDeviceFilterParams(pathname), [pathname])
 
-  const activeFilters = useMemo(() => {
-    const monitorPath = '/category/monitory'
-    const cleanPathname = stripLocaleFromPathname(pathname)
-    return cleanPathname?.includes(monitorPath) ? MONITOR_FILTERS : TABLET_FILTERS
-  }, [pathname])
+  const { data: serverFilters } = useQuery({
+    queryKey: getDeviceFilterQueryKey(filterParams),
+    queryFn: () => apiDevice.getFilters(filterParams ?? undefined),
+    enabled: Boolean(filterParams),
+    staleTime: 5 * 60 * 1000,
+  })
 
-  const filterTitleById = useMemo(() => {
-    return Object.fromEntries(activeFilters.map((filter) => [filter.id, filter.title]))
-  }, [activeFilters])
+  const filterTitleById = useMemo(
+    () => ({
+      ...Object.fromEntries(Object.keys(serverFilters?.info ?? {}).map((key) => [key, key])),
+      ...(serverFilters?.infoLabels ?? {}),
+    }),
+    [serverFilters]
+  )
 
   const chips = useMemo(() => {
     const result: ChipItem[] = []

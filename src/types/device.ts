@@ -103,8 +103,10 @@ export interface IDevicesResponse {
 
 export interface IDeviceFiltersResponse {
   info: Record<string, string[]>
+  infoLabels?: Record<string, string>
   brands?: Array<{ name: string }>
   categories?: Array<{ id: number; slug: string; name: string; nameLocalized?: string }>
+  total?: number
   priceRange: {
     min: number | null
     max: number | null

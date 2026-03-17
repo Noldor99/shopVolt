@@ -5,8 +5,6 @@ import { FilterTogleGroup } from '@/components/filter/filter-togle-group'
 import CustomAccordion from '@/components/shared/custom-accordion'
 import { Button } from '@/components/ui/button'
 
-import { usePriceFilter } from '@/hooks/hook-filter/use-price-filter'
-
 import { useDeviceFilters } from '../../hooks/hook-filter/use-device-filters'
 import { FilterPrice } from './filter-price'
 
@@ -23,10 +21,13 @@ export const DeviceFiltersContent = ({ className }: Props) => {
     onToggleOption,
     hasActiveFilters,
     clearFilters,
+    t,
+    minLimit,
+    maxLimit,
+    hasPriceRange,
+    initialPrices,
+    handlePriceChange,
   } = useDeviceFilters()
-
-  const { t, minLimit, maxLimit, hasPriceRange, initialPrices, handleFilterChange } =
-    usePriceFilter()
 
   return (
     <div className={className}>
@@ -36,7 +37,7 @@ export const DeviceFiltersContent = ({ className }: Props) => {
           maxLimit={maxLimit}
           initialMin={initialPrices.min}
           initialMax={initialPrices.max}
-          onFilterChange={handleFilterChange}
+          onFilterChange={handlePriceChange}
           t={t}
         />
       )}

@@ -1,111 +1,60 @@
 'use client'
 
-import { MONITOR_FILTERS, TABLET_FILTERS } from '@/constants/tabletFilters'
+import { useQuery } from '@tanstack/react-query'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getLocaleFromPathname, stripLocaleFromPathname } from '@/lib/i18n'
-import { localizeInfoLabel } from '@/lib/localize-entities'
+import { useCallback, useMemo } from 'react'
 
+import { apiDevice } from '@/actions/client/deviceAction'
 import { useAccordion } from '@/hooks/useAccordion'
-import { IDeviceFiltersResponse } from '@/types/device'
+import { getLocaleFromPathname, getMessages } from '@/lib/i18n'
 import { FilterConfig } from '@/types/filter'
 
-const MONITOR_SLUGS = new Set(['monitors', 'monitory'])
+import { getDeviceFilterParams, getDeviceFilterQueryKey } from './shared'
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+const parsePriceParam = (value: string | null) => {
+  if (!value) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 export const useDeviceFilters = () => {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [serverFilters, setServerFilters] = useState<IDeviceFiltersResponse | null>(null)
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname])
-  const categorySlug = useMemo(() => {
-    const cleanPathname = stripLocaleFromPathname(pathname)
-    return cleanPathname.split('/category/')[1]?.split('/')[0] ?? null
-  }, [pathname])
-  const isMonitorCategory = useMemo(
-    () => Boolean(categorySlug && MONITOR_SLUGS.has(categorySlug)),
-    [categorySlug]
-  )
+  const t = useMemo(() => getMessages(locale), [locale])
+  const filterParams = useMemo(() => getDeviceFilterParams(pathname), [pathname])
 
-  const baseFilters = useMemo(() => {
-    return isMonitorCategory ? MONITOR_FILTERS : TABLET_FILTERS
-  }, [isMonitorCategory])
+  const { data: serverFilters } = useQuery({
+    queryKey: getDeviceFilterQueryKey(filterParams),
+    queryFn: () => apiDevice.getFilters(filterParams ?? undefined),
+    enabled: Boolean(filterParams),
+    staleTime: 5 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    const loadFilters = async () => {
-      if (!categorySlug) {
-        setServerFilters(null)
-        return
-      }
-
-      try {
-        const res = await fetch(
-          `/api/devices/filters?categorySlug=${encodeURIComponent(categorySlug)}&lang=${locale}`
-        )
-        if (!res.ok) throw new Error('Failed to load filters')
-        const payload = (await res.json()) as IDeviceFiltersResponse
-        setServerFilters(payload)
-      } catch {
-        setServerFilters(null)
-      }
-    }
-
-    void loadFilters()
-  }, [categorySlug, locale])
-
-  const activeFilters = useMemo(() => {
-    if (!serverFilters) return baseFilters
-
+  const activeFilters = useMemo<FilterConfig[]>(() => {
     const infoMap = serverFilters?.info ?? {}
-    const hasServerInfoOptions = Object.keys(infoMap).length > 0
-    const brands = serverFilters?.brands?.map((item) => item.name).filter(Boolean) ?? []
+    const labels = serverFilters?.infoLabels ?? {}
 
-    const resolved: FilterConfig[] = baseFilters.map((filter) => {
-      if (filter.id === 'brand') {
-        return {
-          ...filter,
-          options: brands.length ? brands : filter.options,
-        }
-      }
+    return Object.entries(infoMap)
+      .map(([key, values]) => ({
+        id: key,
+        title: labels[key] ?? key,
+        options: [...new Set(values.map((value) => value.trim()).filter(Boolean))],
+      }))
+      .filter((filter) => filter.options.length > 0)
+  }, [serverFilters])
 
-      const keyCandidates = [
-        filter.id,
-        localizeInfoLabel(filter.id, 'ua'),
-        localizeInfoLabel(filter.id, 'en'),
-      ]
-
-      const dynamicOptions = keyCandidates.flatMap((key) => infoMap[key] ?? [])
-      const uniqueDynamicOptions = [...new Set(dynamicOptions)]
-
-      return {
-        ...filter,
-        options:
-          uniqueDynamicOptions.length > 0
-            ? uniqueDynamicOptions
-            : hasServerInfoOptions || isMonitorCategory
-              ? []
-              : filter.options,
-      }
-    })
-
-    const hasBrandFilter = resolved.some((filter) => filter.id === 'brand')
-    const brandFilter: FilterConfig[] =
-      !hasBrandFilter && brands.length
-        ? [
-          {
-            id: 'brand',
-            title: 'Бренд',
-            options: [...new Set(brands)],
-          },
-        ]
-        : []
-
-    const mergedFilters = [...brandFilter, ...resolved]
-    return hasServerInfoOptions || isMonitorCategory
-      ? mergedFilters.filter((filter) => filter.options.length > 0)
-      : mergedFilters
-  }, [baseFilters, isMonitorCategory, serverFilters])
+  const brands = useMemo(
+    () => [...new Set((serverFilters?.brands ?? []).map((item) => item.name.trim()).filter(Boolean))],
+    [serverFilters]
+  )
 
   const { isSectionOpen, toggleSection } = useAccordion([])
 
@@ -113,36 +62,28 @@ export const useDeviceFilters = () => {
     (filterId: string) => {
       const rawValue = searchParams.get(`info.${filterId}`)
       if (!rawValue) return new Set<string>()
-      return new Set(
-        rawValue
-          .split(',')
-          .map((value) => value.trim())
-          .filter(Boolean)
-      )
+
+      return new Set(rawValue.split(',').map((value) => value.trim()).filter(Boolean))
     },
     [searchParams]
   )
 
-  const hasActiveInfoFilters = useMemo(() => {
-    return activeFilters.some((filter) => getSelectedOptions(filter.id).size > 0)
-  }, [activeFilters, getSelectedOptions])
-
-  const hasActiveFilters =
-    hasActiveInfoFilters || searchParams.has('minPrice') || searchParams.has('maxPrice')
-
   const updateQueryParams = useCallback(
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString())
-      for (const [key, value] of Object.entries(updates)) {
+
+      Object.entries(updates).forEach(([key, value]) => {
         if (value && value.length > 0) {
           params.set(key, value)
         } else {
           params.delete(key)
         }
-      }
+      })
+
       params.set('page', '1')
+
       const query = params.toString()
-      router.push(query ? `${pathname}?${query}` : pathname)
+      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
     },
     [pathname, router, searchParams]
   )
@@ -165,25 +106,106 @@ export const useDeviceFilters = () => {
     [getSelectedOptions, updateQueryParams]
   )
 
+  const hasActiveFilters = useMemo(() => {
+    if (searchParams.has('minPrice') || searchParams.has('maxPrice')) {
+      return true
+    }
+
+    return [...searchParams.keys()].some((key) => key.startsWith('info.'))
+  }, [searchParams])
+
   const clearFilters = useCallback(() => {
-    const updates: Record<string, string | null> = {
-      minPrice: null,
-      maxPrice: null,
+    const params = new URLSearchParams(searchParams.toString())
+
+    params.delete('minPrice')
+    params.delete('maxPrice')
+
+    for (const key of [...params.keys()]) {
+      if (key.startsWith('info.')) {
+        params.delete(key)
+      }
     }
-    for (const filter of activeFilters) {
-      updates[`info.${filter.id}`] = null
+
+    params.set('page', '1')
+
+    const query = params.toString()
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams])
+
+  const priceRange = useMemo(
+    () => ({
+      min: serverFilters?.priceRange?.min ?? null,
+      max: serverFilters?.priceRange?.max ?? null,
+    }),
+    [serverFilters]
+  )
+
+  const minLimit = priceRange.min ?? 0
+  const maxLimit = priceRange.max ?? 0
+  const hasPriceRange =
+    priceRange.min !== null && priceRange.max !== null && priceRange.max >= priceRange.min
+
+  const initialPrices = useMemo(() => {
+    if (!hasPriceRange) {
+      return { min: 0, max: 0 }
     }
-    updateQueryParams(updates)
-  }, [activeFilters, updateQueryParams])
+
+    const urlMin = parsePriceParam(searchParams.get('minPrice'))
+    const urlMax = parsePriceParam(searchParams.get('maxPrice'))
+
+    const min = clamp(urlMin ?? minLimit, minLimit, maxLimit)
+    const max = clamp(urlMax ?? maxLimit, minLimit, maxLimit)
+
+    return {
+      min: Math.min(min, max),
+      max: Math.max(min, max),
+    }
+  }, [hasPriceRange, maxLimit, minLimit, searchParams])
+
+  const handlePriceChange = useCallback(
+    ({ minPrice, maxPrice }: { minPrice: number; maxPrice: number }) => {
+      if (!hasPriceRange) {
+        return
+      }
+
+      const params = new URLSearchParams(searchParams.toString())
+      const nextMin = clamp(Math.min(minPrice, maxPrice), minLimit, maxLimit)
+      const nextMax = clamp(Math.max(minPrice, maxPrice), minLimit, maxLimit)
+
+      if (nextMin <= minLimit) {
+        params.delete('minPrice')
+      } else {
+        params.set('minPrice', String(nextMin))
+      }
+
+      if (nextMax >= maxLimit) {
+        params.delete('maxPrice')
+      } else {
+        params.set('maxPrice', String(nextMax))
+      }
+
+      params.set('page', '1')
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    },
+    [hasPriceRange, maxLimit, minLimit, pathname, router, searchParams]
+  )
 
   return {
     activeFilters,
-    isSectionOpen,
-    toggleSection,
+    brands,
     getSelectedOptions,
-    onToggleOption,
     hasActiveFilters,
-    updateQueryParams,
+    hasPriceRange,
+    initialPrices,
+    isSectionOpen,
+    maxLimit,
+    minLimit,
+    onToggleOption,
+    priceRange,
     clearFilters,
+    t,
+    toggleSection,
+    updateQueryParams,
+    handlePriceChange,
   }
 }
