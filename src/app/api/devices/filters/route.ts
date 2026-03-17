@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
+import { NextRequest, NextResponse } from "next/server"
 
-import { localizeCategoryName, localizeInfoLabel } from "@/lib/localize-entities"
+import { localizeCategoryName } from "@/lib/localize-entities"
 import { resolveLocaleFromRequest } from "@/lib/request-locale"
 import { prisma } from "@/prisma/prisma-client"
 
@@ -21,20 +21,36 @@ type ValueTranslationLike = {
   value: string
 }
 
-type DeviceInfoFilterRow = Prisma.DeviceInfoGetPayload<{
-  include: {
-    categoryAttribute: {
-      include: {
+type CategoryWithFilters = Prisma.CategoryGetPayload<{
+  select: {
+    id: true
+    slug: true
+    translations: {
+      select: { name: true }
+    }
+    categoryAttributes: {
+      select: {
+        sortOrder: true
         attribute: {
-          include: {
-            translations: true
+          select: {
+            translations: {
+              select: {
+                locale: true
+                name: true
+              }
+            }
+            values: {
+              select: {
+                translations: {
+                  select: {
+                    locale: true
+                    value: true
+                  }
+                }
+              }
+            }
           }
         }
-      }
-    }
-    attributeValue: {
-      include: {
-        translations: true
       }
     }
   }
@@ -53,28 +69,82 @@ const parseIntParam = (value: string | null) => {
   return Number.isInteger(parsed) ? parsed : null
 }
 
+const getLocaleFallbacks = (locale: string) => [...new Set([locale, "ua", "en"])]
+
 export async function GET(req: NextRequest) {
   const locale = resolveLocaleFromRequest(req)
   const categoryId = parseIntParam(req.nextUrl.searchParams.get("categoryId"))
   const categorySlug = req.nextUrl.searchParams.get("categorySlug")?.trim() || null
   const brandId = parseIntParam(req.nextUrl.searchParams.get("brandId"))
+  const categoryWhere: Prisma.CategoryWhereUniqueInput | null = categorySlug
+    ? { slug: categorySlug }
+    : categoryId
+      ? { id: categoryId }
+      : null
 
-  const where: Record<string, unknown> = {}
-  if (categoryId) where.categoryId = categoryId
-  if (categorySlug) {
-    where.category = {
-      is: { slug: categorySlug },
-    }
-  }
+  const where: Prisma.DeviceWhereInput = {}
+  if (categorySlug) where.category = { is: { slug: categorySlug } }
+  else if (categoryId) where.categoryId = categoryId
   if (brandId) where.brandId = brandId
+  const localeFallbacks = getLocaleFallbacks(locale)
 
-  const [brands, categories, infoRows, priceRange, total] = await Promise.all([
-    prisma.brand.findMany({
-      where: {
-        devices: {
-          some: where,
+  const [categoryData, brands, categories, priceRange, total] = await Promise.all([
+    categoryWhere
+      ? prisma.category.findUnique({
+        where: categoryWhere,
+        select: {
+          id: true,
+          slug: true,
+          translations: {
+            where: {
+              locale: {
+                in: localeFallbacks,
+              },
+            },
+            select: { name: true, locale: true },
+          },
+          categoryAttributes: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              sortOrder: true,
+              attribute: {
+                select: {
+                  translations: {
+                    where: {
+                      locale: {
+                        in: localeFallbacks,
+                      },
+                    },
+                    select: {
+                      locale: true,
+                      name: true,
+                    },
+                  },
+                  values: {
+                    orderBy: { id: "asc" },
+                    select: {
+                      translations: {
+                        where: {
+                          locale: {
+                            in: localeFallbacks,
+                          },
+                        },
+                        select: {
+                          locale: true,
+                          value: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
-      },
+      })
+      : Promise.resolve(null),
+    prisma.brand.findMany({
+      where: categoryWhere ? { categories: { some: categoryWhere } } : { devices: { some: where } },
       orderBy: { name: "asc" },
     }),
     prisma.category.findMany({
@@ -94,28 +164,6 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
-    prisma.deviceInfo.findMany({
-      where: {
-        device: where,
-      },
-      distinct: ["categoryAttributeId", "attributeValueId"],
-      include: {
-        categoryAttribute: {
-          include: {
-            attribute: {
-              include: {
-                translations: true,
-              },
-            },
-          },
-        },
-        attributeValue: {
-          include: {
-            translations: true,
-          },
-        },
-      },
-    }),
     prisma.device.aggregate({
       where,
       _min: {
@@ -130,25 +178,39 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  const groupedInfo = infoRows.reduce<Record<string, string[]>>(
-    (acc: Record<string, string[]>, row: DeviceInfoFilterRow) => {
-      const keyTranslation = getPreferredTranslation<AttributeTranslationLike>(
-        row.categoryAttribute?.attribute?.translations ?? [],
-        locale
-      )
-      const valueTranslation = getPreferredTranslation<ValueTranslationLike>(
-        row.attributeValue?.translations ?? [],
-        locale
-      )
-      const key = keyTranslation?.name?.trim()
-      const value = valueTranslation?.value?.trim()
-      if (!key || !value) return acc
-      if (!acc[key]) acc[key] = []
-      if (!acc[key].includes(value)) acc[key].push(value)
-      return acc
-    },
-    {}
-  )
+  const groupedInfo =
+    (categoryData as CategoryWithFilters | null)?.categoryAttributes.reduce<Record<string, string[]>>(
+      (acc, categoryAttribute) => {
+        const keyTranslation = getPreferredTranslation<AttributeTranslationLike>(
+          categoryAttribute.attribute.translations ?? [],
+          locale
+        )
+        const key = keyTranslation?.name?.trim()
+        if (!key) return acc
+
+        const values = categoryAttribute.attribute.values
+          .map((attributeValue) =>
+            getPreferredTranslation<ValueTranslationLike>(attributeValue.translations ?? [], locale)
+              ?.value?.trim()
+          )
+          .filter((value): value is string => Boolean(value))
+
+        if (!values.length) return acc
+
+        if (!acc[key]) {
+          acc[key] = []
+        }
+
+        for (const value of values) {
+          if (!acc[key].includes(value)) {
+            acc[key].push(value)
+          }
+        }
+
+        return acc
+      },
+      {}
+    ) ?? {}
 
   return NextResponse.json({
     locale,
@@ -166,9 +228,7 @@ export async function GET(req: NextRequest) {
       }
     }),
     info: groupedInfo,
-    infoLabels: Object.fromEntries(
-      Object.keys(groupedInfo).map((key) => [key, localizeInfoLabel(key, locale)])
-    ),
+    infoLabels: Object.fromEntries(Object.keys(groupedInfo).map((key) => [key, key])),
     priceRange: {
       min: priceRange._min.priceUah ?? null,
       max: priceRange._max.priceUah ?? null,
