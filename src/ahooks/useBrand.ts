@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { IBrandSchema, apiBrand } from "@/actions/client/brandAction"
+import { IBrandSchema, IBrandUpdateSchema, apiBrand } from "@/actions/client/brandAction"
 
 export const useGetBrand = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({
@@ -33,10 +33,11 @@ export const useUpdateBrand = (id: string | number) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (body: Partial<IBrandSchema>) => apiBrand.update(id, body),
+    mutationFn: (body: IBrandUpdateSchema) => apiBrand.update(id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brand"] })
       queryClient.invalidateQueries({ queryKey: ["brand", id] })
+      queryClient.invalidateQueries({ queryKey: ["category"] })
     },
   })
 }
@@ -48,6 +49,7 @@ export const useDeleteBrand = () => {
     mutationFn: (id: string | number) => apiBrand.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brand"] })
+      queryClient.invalidateQueries({ queryKey: ["category"] })
     },
   })
 }

@@ -10,6 +10,23 @@ type FilterCategory = {
   translations: Array<{ name: string }>
 }
 
+type AttributeTranslationLike = {
+  locale: string
+  name: string
+}
+
+type ValueTranslationLike = {
+  locale: string
+  value: string
+}
+
+const getPreferredTranslation = <T extends { locale: string }>(items: T[], locale: string) =>
+  items.find((item) => item.locale === locale) ??
+  items.find((item) => item.locale === "ua") ??
+  items.find((item) => item.locale === "en") ??
+  items[0] ??
+  null
+
 const parseIntParam = (value: string | null) => {
   if (!value) return null
   const parsed = Number(value)
@@ -21,7 +38,6 @@ export async function GET(req: NextRequest) {
   const categoryId = parseIntParam(req.nextUrl.searchParams.get("categoryId"))
   const categorySlug = req.nextUrl.searchParams.get("categorySlug")?.trim() || null
   const brandId = parseIntParam(req.nextUrl.searchParams.get("brandId"))
-  const deviceType = req.nextUrl.searchParams.get("deviceType")?.trim() || null
 
   const where: Record<string, unknown> = {}
   if (categoryId) where.categoryId = categoryId
@@ -31,7 +47,6 @@ export async function GET(req: NextRequest) {
     }
   }
   if (brandId) where.brandId = brandId
-  if (deviceType) where.deviceType = deviceType
 
   const [brands, categories, infoRows, priceRange] = await Promise.all([
     prisma.brand.findMany({
@@ -59,19 +74,27 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
-    prisma.deviceInfoTranslation.findMany({
+    prisma.deviceInfo.findMany({
       where: {
-        locale,
-        deviceInfo: {
-          device: where,
+        device: where,
+      },
+      distinct: ["categoryAttributeId", "attributeValueId"],
+      include: {
+        categoryAttribute: {
+          include: {
+            attribute: {
+              include: {
+                translations: true,
+              },
+            },
+          },
+        },
+        attributeValue: {
+          include: {
+            translations: true,
+          },
         },
       },
-      select: {
-        key: true,
-        value: true,
-      },
-      distinct: ["key", "value"],
-      orderBy: [{ key: "asc" }, { value: "asc" }],
     }),
     prisma.device.aggregate({
       where,
@@ -85,9 +108,20 @@ export async function GET(req: NextRequest) {
   ])
 
   const groupedInfo = infoRows.reduce<Record<string, string[]>>(
-    (acc: Record<string, string[]>, row: { key: string; value: string }) => {
-      if (!acc[row.key]) acc[row.key] = []
-      acc[row.key].push(row.value)
+    (acc: Record<string, string[]>, row: any) => {
+      const keyTranslation = getPreferredTranslation<AttributeTranslationLike>(
+        row.categoryAttribute?.attribute?.translations ?? [],
+        locale
+      )
+      const valueTranslation = getPreferredTranslation<ValueTranslationLike>(
+        row.attributeValue?.translations ?? [],
+        locale
+      )
+      const key = keyTranslation?.name?.trim()
+      const value = valueTranslation?.value?.trim()
+      if (!key || !value) return acc
+      if (!acc[key]) acc[key] = []
+      if (!acc[key].includes(value)) acc[key].push(value)
       return acc
     },
     {}

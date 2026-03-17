@@ -1,24 +1,131 @@
-import Link from "next/link"
+import Image from 'next/image'
+import Link from 'next/link'
 
-import { HomeSlider } from "./_components/home-slider"
-import { categoryPrefetch } from "@/actions/server/categoryPrefetch"
-import { devicePrefetch } from "@/actions/server/devicePrefetch"
-import { Container } from "@/components/ui/container"
-import { withLocalePath } from "@/lib/i18n"
-import { localizeCategoryName } from "@/lib/localize-entities"
-import { getServerLocale } from "@/lib/server-locale"
+import { Container } from '@/components/ui/container'
+
+import { categoryPrefetch } from '@/actions/server/categoryPrefetch'
+import { devicePrefetch } from '@/actions/server/devicePrefetch'
+
+import { withLocalePath } from '@/lib/i18n'
+import { localizeCategoryName } from '@/lib/localize-entities'
+import { getServerLocale } from '@/lib/server-locale'
+
+import { HomeSlider } from './_components/home-slider'
 
 export const generateMetadata = async () => {
   return {
-    title: "Home Page",
-    description: "V3V - Home Page",
+    title: 'Home Page',
+    description: 'V3V - Home Page',
   }
 }
 
+type HomePageContent = typeof HOME_CONTENT_BASE
+
+const HOME_CONTENT_BASE = {
+  promoTag: 'Online tech store',
+  promoTitle: 'Everything you need for a smart purchase in one place',
+  promoDescription:
+    'Browse popular categories, compare featured devices, and choose equipment for work, study, gaming, and everyday use.',
+  primaryAction: 'Browse catalog',
+  secondaryAction: 'View featured items',
+  categoriesTitle: 'Shop by category',
+  categoriesDescription: 'Quick access to the most popular product groups in the catalog.',
+  featuredTitle: 'Featured products',
+  featuredDescription: 'Top picks that users most often view right now.',
+  fromPrice: 'from',
+  buyNow: 'Buy now',
+  noPrice: 'Check price',
+  benefitsTitle: 'Why customers choose us',
+  benefits: [
+    {
+      title: 'Assortment',
+      description: 'A convenient catalog of devices for home, office, and entertainment.',
+    },
+    {
+      title: 'Fast selection',
+      description: 'Clear categories, search, and filters help find the right device faster.',
+    },
+    {
+      title: 'Current offers',
+      description: 'Featured positions, new arrivals, and best-value models on one page.',
+    },
+  ],
+  ctaTitle: 'Looking for your next device?',
+  ctaDescription:
+    'Open the full catalog and choose tablets, monitors, and other equipment with convenient navigation.',
+  ctaButton: 'Go to catalog',
+  highlights: ['Popular categories', 'Featured devices', 'Quick navigation'],
+  storeAdvantageLabel: 'Store advantage',
+  categoryLabel: 'Category',
+  openSelectionLabel: 'Open selection',
+}
+
+const HOME_CONTENT = {
+  en: HOME_CONTENT_BASE,
+  ua: {
+    promoTag: 'Інтернет-магазин техніки',
+    promoTitle: 'Усе потрібне для вдалої покупки в одному місці',
+    promoDescription:
+      'Переглядайте популярні категорії, порівнюйте рекомендовані товари та обирайте техніку для роботи, навчання, ігор і щоденного використання.',
+    primaryAction: 'Перейти до каталогу',
+    secondaryAction: 'Дивитись хіти',
+    categoriesTitle: 'Покупки за категоріями',
+    categoriesDescription: 'Швидкий доступ до найпопулярніших груп товарів у каталозі.',
+    featuredTitle: 'Хіти каталогу',
+    featuredDescription: 'Добірка товарів, які найчастіше переглядають прямо зараз.',
+    fromPrice: 'від',
+    buyNow: 'Купити',
+    noPrice: 'Ціну уточнюйте',
+    benefitsTitle: 'Чому обирають нас',
+    benefits: [
+      {
+        title: 'Асортимент',
+        description: 'Зручний каталог техніки для дому, офісу та розваг.',
+      },
+      {
+        title: 'Швидкий вибір',
+        description:
+          'Зрозумілі категорії, пошук і фільтри допомагають знайти потрібну модель швидше.',
+      },
+      {
+        title: 'Актуальні пропозиції',
+        description: 'Популярні позиції, новинки та вигідні моделі зібрані на одній сторінці.',
+      },
+    ],
+    ctaTitle: 'Шукаєте свій наступний девайс?',
+    ctaDescription:
+      'Відкрийте повний каталог і підберіть планшети, монітори та іншу техніку зі зручною навігацією.',
+    ctaButton: 'До каталогу',
+    highlights: ['Популярні категорії', 'Рекомендовані товари', 'Швидка навігація'],
+    storeAdvantageLabel: 'Перевага магазину',
+    categoryLabel: 'Категорія',
+    openSelectionLabel: 'Перейти до добірки',
+  },
+} satisfies Record<string, HomePageContent>
+
 const HomePage = async () => {
   const locale = await getServerLocale()
-  const isEn = locale === "en"
-  const categories = (await categoryPrefetch({ lang: locale }))
+  const isEn = locale === 'en'
+  const [categoriesRaw, devicesResponse] = await Promise.all([
+    categoryPrefetch({ lang: locale }),
+    devicePrefetch({
+      lang: locale,
+      page: 1,
+      limit: 30,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    }),
+  ])
+
+  const content = HOME_CONTENT[locale]
+
+  const formatPrice = (price: number | null) => {
+    if (price === null) return content.noPrice
+
+    return `${content.fromPrice} ${price.toLocaleString(isEn ? 'en-US' : 'uk-UA')} ₴`
+  }
+
+  const categories = categoriesRaw
     .slice()
     .sort((a, b) => a.slug.localeCompare(b.slug))
     .map((category) => ({
@@ -27,19 +134,12 @@ const HomePage = async () => {
       name: category.name,
     }))
 
-  const devicesResponse = await devicePrefetch({
-    lang: locale,
-    page: 1,
-    limit: 30,
-    sortBy: "createdAt",
-    sortOrder: "desc",
-  })
   const devices = devicesResponse.data
   const featuredDevices = devices.slice(0, 6)
 
   const categoryById = new Map(categories.map((item) => [item.id, item]))
   const primaryCategoryHref = withLocalePath(
-    categories[0] ? `/category/${categories[0].slug}` : "/",
+    categories[0] ? `/category/${categories[0].slug}` : '/',
     locale
   )
   const slides = devices
@@ -50,97 +150,11 @@ const HomePage = async () => {
       return {
         id: device.slug,
         title: device.nameLocalized ?? device.name ?? device.slug,
-        subtitle: category ? localizeCategoryName(category.slug, category.name, locale) : "",
+        subtitle: category ? localizeCategoryName(category.slug, category.name, locale) : '',
         imageUrl: device.imageUrl,
-        href: `/category/${category?.slug ?? ""}`,
+        href: `/category/${category?.slug ?? ''}`,
       }
     })
-
-  const content = isEn
-    ? {
-        promoTag: "Online tech store",
-        promoTitle: "Everything you need for a smart purchase in one place",
-        promoDescription:
-          "Browse popular categories, compare featured devices, and choose equipment for work, study, gaming, and everyday use.",
-        primaryAction: "Browse catalog",
-        secondaryAction: "View featured items",
-        categoriesTitle: "Shop by category",
-        categoriesDescription: "Quick access to the most popular product groups in the catalog.",
-        featuredTitle: "Featured products",
-        featuredDescription: "Top picks that users most often view right now.",
-        fromPrice: "from",
-        buyNow: "Buy now",
-        noPrice: "Check price",
-        benefitsTitle: "Why customers choose us",
-        benefits: [
-          {
-            title: "Assortment",
-            description: "A convenient catalog of devices for home, office, and entertainment.",
-          },
-          {
-            title: "Fast selection",
-            description: "Clear categories, search, and filters help find the right device faster.",
-          },
-          {
-            title: "Current offers",
-            description: "Featured positions, new arrivals, and best-value models on one page.",
-          },
-        ],
-        ctaTitle: "Looking for your next device?",
-        ctaDescription:
-          "Open the full catalog and choose tablets, monitors, and other equipment with convenient navigation.",
-        ctaButton: "Go to catalog",
-        highlights: [
-          "Popular categories",
-          "Featured devices",
-          "Quick navigation",
-        ],
-      }
-    : {
-        promoTag: "Інтернет-магазин техніки",
-        promoTitle: "Усе потрібне для вдалої покупки в одному місці",
-        promoDescription:
-          "Переглядайте популярні категорії, порівнюйте рекомендовані товари та обирайте техніку для роботи, навчання, ігор і щоденного використання.",
-        primaryAction: "Перейти до каталогу",
-        secondaryAction: "Дивитись хіти",
-        categoriesTitle: "Покупки за категоріями",
-        categoriesDescription: "Швидкий доступ до найпопулярніших груп товарів у каталозі.",
-        featuredTitle: "Хіти каталогу",
-        featuredDescription: "Добірка товарів, які найчастіше переглядають прямо зараз.",
-        fromPrice: "від",
-        buyNow: "Купити",
-        noPrice: "Ціну уточнюйте",
-        benefitsTitle: "Чому обирають нас",
-        benefits: [
-          {
-            title: "Асортимент",
-            description: "Зручний каталог техніки для дому, офісу та розваг.",
-          },
-          {
-            title: "Швидкий вибір",
-            description: "Зрозумілі категорії, пошук і фільтри допомагають знайти потрібну модель швидше.",
-          },
-          {
-            title: "Актуальні пропозиції",
-            description: "Популярні позиції, новинки та вигідні моделі зібрані на одній сторінці.",
-          },
-        ],
-        ctaTitle: "Шукаєте свій наступний девайс?",
-        ctaDescription:
-          "Відкрийте повний каталог і підберіть планшети, монітори та іншу техніку зі зручною навігацією.",
-        ctaButton: "До каталогу",
-        highlights: [
-          "Популярні категорії",
-          "Рекомендовані товари",
-          "Швидка навігація",
-        ],
-      }
-
-  const formatPrice = (price: number | null) => {
-    if (price === null) return content.noPrice
-
-    return `${content.fromPrice} ${price.toLocaleString(isEn ? "en-US" : "uk-UA")} ₴`
-  }
 
   return (
     <section className="space-y-8 pb-10">
@@ -181,9 +195,7 @@ const HomePage = async () => {
                 key={item}
                 className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
               >
-                <p className="text-sm font-medium text-slate-500">
-                  {isEn ? "Store advantage" : "Перевага магазину"}
-                </p>
+                <p className="text-sm font-medium text-slate-500">{content.storeAdvantageLabel}</p>
                 <p className="mt-2 text-lg font-semibold text-slate-900">{item}</p>
               </div>
             ))}
@@ -209,11 +221,11 @@ const HomePage = async () => {
                   className="group rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-1 hover:border-slate-300 hover:bg-white hover:shadow-lg"
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-                    {isEn ? "Category" : "Категорія"}
+                    {content.categoryLabel}
                   </p>
                   <p className="mt-3 text-lg font-semibold text-slate-900">{localizedName}</p>
                   <p className="mt-4 text-sm font-medium text-slate-500 transition group-hover:text-slate-900">
-                    {isEn ? "Open selection" : "Перейти до добірки"}
+                    {content.openSelectionLabel}
                   </p>
                 </Link>
               )
@@ -239,9 +251,11 @@ const HomePage = async () => {
                 className="group overflow-hidden rounded-3xl border border-slate-200 bg-white transition hover:-translate-y-1 hover:shadow-xl"
               >
                 <div className="relative h-56 overflow-hidden bg-slate-100">
-                  <img
+                  <Image
                     src={device.imageUrl}
                     alt={device.nameLocalized ?? device.name ?? device.slug}
+                    fill
+                    sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                 </div>

@@ -132,6 +132,28 @@ export async function DELETE(_: NextRequest, { params }: Params) {
   }
 
   try {
+    const category = await prisma.category.findUnique({
+      where: { id },
+      select: {
+        _count: {
+          select: {
+            devices: true,
+          },
+        },
+      },
+    })
+
+    if (!category) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 })
+    }
+
+    if ((category._count?.devices ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "Category has devices. Remove or move products first." },
+        { status: 409 }
+      )
+    }
+
     await prisma.category.delete({ where: { id } })
     return NextResponse.json({ ok: true })
   } catch (error) {

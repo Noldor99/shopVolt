@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_URL") // uses connection pooling
-  directUrl = env("PRISMA_DATABASE_URL") // uses a direct connection
+  url       = env("POSTGRES_URL")
+  directUrl = env("PRISMA_DATABASE_URL")
 }
 
 model User {
@@ -40,8 +40,11 @@ model Category {
   id   Int    @id @default(autoincrement())
   slug String @unique
 
-  translations CategoryTranslation[]
-  devices      Device[]
+  categoryAttributes CategoryAttribute[]
+  translations       CategoryTranslation[]
+
+  devices Device[]
+  brands  Brand[]  @relation("CategoryToBrand")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -61,11 +64,71 @@ model CategoryTranslation {
 model Brand {
   id   Int    @id @default(autoincrement())
   name String @unique
+  slug String @unique
 
   devices Device[]
 
+  categories Category[] @relation("CategoryToBrand")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Attribute {
+  id Int @id @default(autoincrement())
+
+  // Унікальний технічний ідентифікатор для розробника
+  // Приклади: "color", "ram_size", "display_type", "cpu_model"
+  code String @unique
+
+  translations AttributeTranslation[]
+
+  // Зв'язок із категоріями (які атрибути доступні в "Смартфонах", а які в "Ноутбуках")
+  // Приклад: в категорії "Смартфони" є атрибут "nfc", а в "Процесорах" — ні.
+  categoryAttributes CategoryAttribute[]
+
+  // Приклад для "color": ["Red", "Blue", "Black"]
+  // Приклад для "ram_size": ["8GB", "16GB", "32GB"]
+  values AttributeValue[]
+}
+
+model AttributeTranslation {
+  id Int @id @default(autoincrement())
+
+  // Код мови. Приклади: "uk", "en", "pl"
+  locale String
+
+  name        String
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  attributeId Int
+
+  @@unique([attributeId, locale])
+}
+
+model CategoryAttribute {
+  id Int @id @default(autoincrement())
+
+  categoryId  Int
+  attributeId Int
+
+  // Приклад: true для "Процесор" у категорії "Смартфони", false для "Наявність чохла"
+  isRequired Boolean @default(false)
+
+  // Чи є цей атрибут варіантом товару (впливає на вибір моделі)?
+  isVariant Boolean @default(false)
+
+  sortOrder Int @default(0)
+
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  deviceInfos DeviceInfo[]
+
+  deviceItemProperties DeviceItemProperty[]
+
+  @@unique([categoryId, attributeId])
+  @@index([categoryId, sortOrder])
+  @@index([attributeId])
 }
 
 model Device {
@@ -73,8 +136,6 @@ model Device {
   slug      String   @unique
   imageUrl  String
   imageUrls String[] @default([])
-
-  deviceType DeviceType @default(OTHER)
 
   priceUah     Int?
   oldPriceUah  Int?
@@ -91,15 +152,14 @@ model Device {
   brand   Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
   brandId Int?
 
-  info          DeviceInfo[]
-  basketDevices BasketDevice[]
-  favorites     Favorite[]
+  info      DeviceInfo[]
+  items     DeviceItem[]
+  favorites Favorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([categoryId, brandId])
-  @@index([deviceType])
   @@index([priceUah])
   @@index([rating])
 }
@@ -125,7 +185,65 @@ model DeviceInfo {
   device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   deviceId Int
 
-  translations DeviceInfoTranslation[]
+  categoryAttributeId Int
+  categoryAttribute   CategoryAttribute @relation(fields: [categoryAttributeId], references: [id], onDelete: Cascade)
+
+  attributeValueId Int
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deviceId])
+  @@index([categoryAttributeId])
+  @@index([attributeValueId])
+}
+
+model AttributeValue {
+  id          Int       @id @default(autoincrement())
+  attributeId Int
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  visualValue String?
+
+  // Технічний код значення (незмінний, для логіки)
+  // Приклади: "8gb", "16gb", "black", "amoled"
+  code String
+
+  translations AttributeValueTranslation[]
+
+  deviceInfos DeviceInfo[]
+
+  deviceItemProperties DeviceItemProperty[]
+
+  @@unique([attributeId, code])
+  @@index([attributeId])
+}
+
+model AttributeValueTranslation {
+  id     Int    @id @default(autoincrement())
+  value  String
+  locale String
+
+  attributeValueId Int
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  @@unique([attributeValueId, locale])
+}
+
+model DeviceItem {
+  id          Int     @id @default(autoincrement())
+  sku         String  @unique
+  priceUah    Int
+  oldPriceUah Int?
+  stockCount  Int     @default(0)
+  inStock     Boolean @default(true)
+  mainImage   String
+
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId Int
+
+  properties    DeviceItemProperty[]
+  basketDevices BasketDevice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -133,16 +251,25 @@ model DeviceInfo {
   @@index([deviceId])
 }
 
-model DeviceInfoTranslation {
-  id     Int    @id @default(autoincrement())
-  key    String
-  value  String
-  locale String
+model DeviceItemProperty {
+  id Int @id @default(autoincrement())
 
-  deviceInfo   DeviceInfo @relation(fields: [deviceInfoId], references: [id], onDelete: Cascade)
-  deviceInfoId Int
+  deviceItem   DeviceItem @relation(fields: [deviceItemId], references: [id], onDelete: Cascade)
+  deviceItemId Int
 
-  @@unique([deviceInfoId, locale])
+  // Яке саме правило атрибута ми використовуємо
+  // Приклад: Атрибут "Колір", який у категорії "Смартфони" позначений як isVariant = true
+  categoryAttribute   CategoryAttribute @relation(fields: [categoryAttributeId], references: [id], onDelete: Cascade)
+  categoryAttributeId Int
+
+  // Конкретне обране значення
+  // Приклад: "Синій" (ID значення з моделі AttributeValue)
+  attributeValueId Int
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  @@index([deviceItemId])
+  @@index([categoryAttributeId])
+  @@index([attributeValueId])
 }
 
 model Basket {
@@ -166,16 +293,16 @@ model BasketDevice {
   basket   Basket @relation(fields: [basketId], references: [id], onDelete: Cascade)
   basketId Int
 
-  device   Device @relation(fields: [deviceId], references: [id], onDelete: Restrict)
-  deviceId Int
+  deviceItem   DeviceItem @relation(fields: [deviceItemId], references: [id], onDelete: Restrict)
+  deviceItemId Int
 
   quantity Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([basketId, deviceId])
-  @@index([deviceId])
+  @@unique([basketId, deviceItemId])
+  @@index([deviceItemId])
 }
 
 model Favorite {
@@ -191,12 +318,6 @@ model Favorite {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, deviceId])
-}
-
-enum DeviceType {
-  TABLET
-  MONITOR
-  OTHER
 }
 
 model Order {

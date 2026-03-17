@@ -1,42 +1,35 @@
-export type OrderStatus = 'PENDING' | 'SUCCEEDED' | 'CANCELLED';
+import type { Prisma } from "@prisma/client"
 
-export interface IOrderUser {
-  id: number;
-  fullName: string;
-  email: string;
-  role: 'USER' | 'ADMIN';
-  provider: string | null;
-  providerId: string | null;
-  verified: string | null;
-  createdAt: string;
-  updatedAt: string;
+export type OrderStatus = Prisma.OrderGetPayload<Record<string, never>>["status"]
+
+type OrderUserPayload = Prisma.UserGetPayload<Record<string, never>>
+type OrderPayload = Prisma.OrderGetPayload<{
+  include: {
+    user: true
+  }
+}>
+
+export type IOrderUser = Omit<OrderUserPayload, "verified" | "createdAt" | "updatedAt"> & {
+  verified: string | Date | null
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
-export interface IOrder {
-  id: number;
-  userId: number | null;
-  items: unknown;
-  status: OrderStatus;
-  totalAmount: number;
-  paymentId: string | null;
-  fullName: string;
-  address: string;
-  email: string;
-  phone: string;
-  comment: string | null;
-  createdAt: string;
-  updatedAt: string;
-  user?: IOrderUser | null;
+export type IOrder = Omit<OrderPayload, "items" | "createdAt" | "updatedAt" | "user"> & {
+  items: Prisma.JsonValue | null
+  createdAt: string | Date
+  updatedAt: string | Date
+  user?: IOrderUser | null
 }
 
 export interface IOrdersMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  total: number
+  page: number
+  limit: number
+  totalPages: number
 }
 
 export interface IOrdersResponse {
-  data: IOrder[];
-  meta: IOrdersMeta;
+  data: IOrder[]
+  meta: IOrdersMeta
 }

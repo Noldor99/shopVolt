@@ -10,7 +10,10 @@
     "prisma:push": "dotenv -e .development.env -- prisma db push --schema ./src/prisma/schema.prisma",
     "prisma:studio": "dotenv -e .development.env -- prisma studio --schema ./src/prisma/schema.prisma",
     "seed": "dotenv -e .development.env -- prisma db seed",
-    "postinstall": "prisma generate --schema ./src/prisma/schema.prisma"
+    "postinstall": "prisma generate --schema ./src/prisma/schema.prisma",
+    "prisma:push:prod": "prisma db push --schema ./src/prisma/schema.prisma",
+    "seed:prod": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" src/prisma/seed.ts",
+    "generate:prod": "prisma generate --schema ./src/prisma/schema.prisma"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} src/prisma/seed.ts",

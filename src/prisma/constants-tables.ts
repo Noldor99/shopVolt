@@ -1,4 +1,4 @@
-export const ram_data = [
+export const ram = [
   { ua: { key: "Оперативна пам'ять", value: "128 МБ" }, en: { key: "RAM", value: "128 MB" } },
   { ua: { key: "Оперативна пам'ять", value: "256 МБ" }, en: { key: "RAM", value: "256 MB" } },
   { ua: { key: "Оперативна пам'ять", value: "512 МБ" }, en: { key: "RAM", value: "512 MB" } },
@@ -16,7 +16,7 @@ export const ram_data = [
   { ua: { key: "Оперативна пам'ять", value: "32 ГБ" }, en: { key: "RAM", value: "32 GB" } },
   { ua: { key: "Оперативна пам'ять", value: "64 ГБ" }, en: { key: "RAM", value: "64 GB" } },
 ];
-export const os_data = [
+export const os = [
   {
     ua: { key: "Операційна система", value: "Android" },
     en: { key: "Operating system", value: "Android" },
@@ -65,7 +65,7 @@ export const wireless = [
   "NFC"
 ]
 
-export const features_data = [
+export const features = [
   {
     ua: { key: "Особливості", value: "З підтримкою OTG" },
     en: { key: "Features", value: "OTG support" },
@@ -102,7 +102,7 @@ export const internalStorage = [
   { value: "2048", label: { ua: "2 ТБ", en: "2 TB" } },
 ];
 
-export const colors_data = [
+export const colors = [
   {
     ua: { key: "Колір", value: "Сірий" },
     en: { key: "Color", value: "Gray" },
@@ -137,7 +137,7 @@ export const colors_data = [
   },
 ];
 
-export const products = [
+export const tabletDevices = [
   {
     "id": "tablet-001",
     "sku": "TAB-001",

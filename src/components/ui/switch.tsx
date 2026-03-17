@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import * as SwitchPrimitives from "@radix-ui/react-switch"
+import * as SwitchPrimitives from '@radix-ui/react-switch'
 
-import * as React from "react"
+import * as React from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
@@ -12,12 +12,11 @@ const Switch = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      "mt-0 inline-flex shrink-0 items-center",
-      "peer h-5 w-10 cursor-pointer shadow-sm",
-      "rounded-full border border-black transition-colors",
-      "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-      "disabled:cursor-not-allowed disabled:opacity-50",
-      "data-[state=checked]:border-none data-[state=checked]:bg-primary data-[state=unchecked]:bg-white",
+      'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-all duration-300',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      'disabled:cursor-not-allowed disabled:opacity-50',
+      'bg-slate-200 data-[state=unchecked]:hover:bg-slate-300',
+      'data-[state=checked]:bg-primary data-[state=checked]:shadow-[0_0_15px_-3px_rgba(var(--primary),0.5)]',
       className
     )}
     {...props}
@@ -25,8 +24,10 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        "pointer-events-none block h-4 w-4 rounded-full bg-yellow shadow-lg ring-0 transition-transform",
-        "data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-1"
+        'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-xl ring-0 transition-all duration-300 ease-in-out',
+        'data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0.5',
+        'data-[state=checked]:scale-110',
+        'data-[state=checked]:bg-yellow-400'
       )}
     />
   </SwitchPrimitives.Root>

@@ -1,21 +1,34 @@
-import { IDevice } from "@/types/device"
+import type { Prisma } from "@prisma/client"
 
-export interface IBasketDevice {
-  id: number
-  basketId: number
-  deviceId: number
-  quantity: number
-  createdAt: string
-  updatedAt: string
+import { deviceInclude, IDevice } from "@/types/device"
+
+const basketInclude = {
+  devices: {
+    include: {
+      deviceItem: {
+        include: {
+          device: {
+            include: deviceInclude,
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.BasketInclude
+
+type BasketPayload = Prisma.BasketGetPayload<{ include: typeof basketInclude }>
+type BasketDevicePayload = BasketPayload["devices"][number]
+
+export type IBasketDevice = Omit<BasketDevicePayload, "createdAt" | "updatedAt"> & {
+  // Legacy compatibility: old endpoints/UI still use deviceId/device
+  deviceId?: number
   device?: IDevice
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
-export interface IBasket {
-  id: number
-  userId: number | null
-  tokenId: string | null
-  totalAmount: number
-  createdAt: string
-  updatedAt: string
+export type IBasket = Omit<BasketPayload, "createdAt" | "updatedAt" | "devices"> & {
+  createdAt: string | Date
+  updatedAt: string | Date
   devices?: IBasketDevice[]
 }

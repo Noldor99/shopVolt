@@ -13,7 +13,8 @@ export const BasketDeviceSchema = z.object({
   basketId: z.coerce.number().int().positive().optional(),
   userId: z.coerce.number().int().positive().optional(),
   tokenId: z.string().min(1).optional(),
-  deviceId: z.coerce.number().int().positive(),
+  deviceId: z.coerce.number().int().positive().optional(),
+  deviceItemId: z.coerce.number().int().positive().optional(),
   quantity: z.coerce.number().int().positive().optional(),
 })
 
@@ -29,8 +30,8 @@ export interface ApiBasket {
   getOne: (params: QueryBasketParams) => Promise<IBasket | null>
   create: (body: IBasketSchema) => Promise<IBasket>
   addDevice: (body: IBasketDeviceSchema) => Promise<IBasket>
-  updateDevice: (body: { basketId: number; deviceId: number; quantity: number }) => Promise<IBasket>
-  removeDevice: (body: { basketId: number; deviceId: number }) => Promise<IBasket>
+  updateDevice: (body: { basketId: number; deviceId?: number; deviceItemId?: number; quantity: number }) => Promise<IBasket>
+  removeDevice: (body: { basketId: number; deviceId?: number; deviceItemId?: number }) => Promise<IBasket>
 }
 
 export const apiBasket: ApiBasket = {

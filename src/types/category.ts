@@ -1,10 +1,19 @@
-export interface ICategory {
-  id: number
+import type { Prisma } from "@prisma/client"
+
+export const categoryInclude = {
+  translations: true,
+  _count: {
+    select: {
+      devices: true,
+    },
+  },
+} satisfies Prisma.CategoryInclude
+
+type CategoryPayload = Prisma.CategoryGetPayload<{ include: typeof categoryInclude }>
+
+export type ICategory = Omit<CategoryPayload, "createdAt" | "updatedAt"> & {
   name: string
-  slug: string
-  createdAt: string
-  updatedAt: string
-  _count?: {
-    devices: number
-  }
+  nameLocalized?: string
+  createdAt: string | Date
+  updatedAt: string | Date
 }

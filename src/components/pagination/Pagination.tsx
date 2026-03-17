@@ -17,45 +17,39 @@ type PaginationPropsT = {
 
 export const Pagination = ({ totalCount, items, count, currentPage }: PaginationPropsT) => {
   const totalPages = Math.ceil(totalCount / items)
-
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()!
+  const searchParams = useSearchParams()
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams)
+      const params = new URLSearchParams(searchParams.toString())
       params.set(name, value)
-
       return params.toString()
     },
     [searchParams]
   )
 
-  const handlePrev = () => {
-    if (currentPage > 1) {
-      router.push(pathname + '?' + createQueryString('page', (currentPage - 1).toString()))
-    }
-  }
-
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      router.push(pathname + '?' + createQueryString('page', (+currentPage + 1).toString()))
-    }
+  const navigateToPage = (page: number) => {
+    router.push(pathname + '?' + createQueryString('page', page.toString()), { scroll: false })
   }
 
   const renderPageNumbers = () => {
     const pageNumbers = []
+    let startPage = Math.max(1, currentPage - Math.floor(count / 2))
+    let endPage = Math.min(totalPages, startPage + count - 1)
 
-    const startPage = Math.max(1, currentPage - Math.floor(count / 2))
-    const endPage = Math.min(totalPages, startPage + count - 1)
+    if (endPage - startPage + 1 < count) {
+      startPage = Math.max(1, endPage - count + 1)
+    }
 
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(
         <Button
-          className={cn(i === +currentPage && 'bg-black text-white')}
           key={i}
-          onClick={() => router.push(pathname + '?' + createQueryString('page', i.toString()))}
+          variant="black_out"
+          className={cn(Number(currentPage) === i && 'bg-black text-white hover:bg-black/90')}
+          onClick={() => navigateToPage(i)}
         >
           {i}
         </Button>
@@ -66,23 +60,47 @@ export const Pagination = ({ totalCount, items, count, currentPage }: Pagination
   }
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      router.push(pathname + '?' + createQueryString('page', '1'))
+    if (totalPages > 0 && currentPage > totalPages) {
+      navigateToPage(1)
     }
-  }, [totalPages, currentPage, router, pathname, createQueryString])
+  }, [totalPages, currentPage])
+
+  if (totalPages <= 1) return null
 
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex items-center justify-center gap-2 py-4">
+      {/* Перехід на саму першу сторінку */}
       {currentPage > 1 && (
-        <Button className={cn(currentPage === 1 && 'hidden')} onClick={handlePrev}>
-          Prev
-        </Button>
+        <>
+          <Button variant="black_out" onClick={() => navigateToPage(1)} title="Перша сторінка">
+            «
+          </Button>
+          <Button variant="black_out" onClick={() => navigateToPage(currentPage - 1)} title="Назад">
+            ‹
+          </Button>
+        </>
       )}
-      {renderPageNumbers()}
+
+      <div className="flex items-center gap-2">{renderPageNumbers()}</div>
+
+      {/* Перехід на останню сторінку */}
       {currentPage < totalPages && (
-        <Button className={cn(currentPage === totalPages && 'hidden')} onClick={handleNext}>
-          Next
-        </Button>
+        <>
+          <Button
+            variant="black_out"
+            onClick={() => navigateToPage(+currentPage + 1)}
+            title="Вперед"
+          >
+            ›
+          </Button>
+          <Button
+            variant="black_out"
+            onClick={() => navigateToPage(totalPages)}
+            title="Остання сторінка"
+          >
+            »
+          </Button>
+        </>
       )}
     </div>
   )

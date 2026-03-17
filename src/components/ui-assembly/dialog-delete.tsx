@@ -25,7 +25,7 @@ const DialogDelete = ({ nameDelete, onClick, children }: DialogDeleteProps) => {
         {children ? (
           children
         ) : (
-          <Button className="p-2" variant={'destructive'}>
+          <Button className="p-2" variant={'black_out'}>
             <IconTrash />
           </Button>
         )}
@@ -36,7 +36,7 @@ const DialogDelete = ({ nameDelete, onClick, children }: DialogDeleteProps) => {
             Are you sure you want to delete this {nameDelete}?
           </DialogTitle>
         </DialogHeader>
-        <div className="flex justify-around  gap-[200px]">
+        <div className="flex justify-around gap-[200px]">
           <DialogClose>
             <Button variant={'destructive'} onClick={onClick}>
               Delete

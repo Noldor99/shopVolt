@@ -1,11 +1,18 @@
-import { IDevice } from "@/types/device"
+import type { Prisma } from "@prisma/client"
 
-export interface IFavorite {
-  id: number
-  userId: number
-  deviceId: number
-  createdAt: string
-  updatedAt: string
+import { deviceInclude, IDevice } from "@/types/device"
+
+type FavoritePayload = Prisma.FavoriteGetPayload<{
+  include: {
+    device: {
+      include: typeof deviceInclude
+    }
+  }
+}>
+
+export type IFavorite = Omit<FavoritePayload, "createdAt" | "updatedAt" | "device"> & {
+  createdAt: string | Date
+  updatedAt: string | Date
   device?: IDevice
 }
 

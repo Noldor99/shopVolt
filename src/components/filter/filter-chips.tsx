@@ -1,14 +1,15 @@
 'use client'
 
-import React from 'react'
 import { usePathname } from 'next/navigation'
+
+import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
 
-import { cn } from '@/lib/utils'
 import { getLocaleFromPathname, getMessages } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 
-import { useTopBarFilterChips } from '../layout/hook/use-top-bar-filter-chips'
+import { useTopBarFilterChips } from '../../hooks/hook-filter/use-top-bar-filter-chips'
 
 interface Props {
   totalFound?: number | null

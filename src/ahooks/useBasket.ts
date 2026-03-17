@@ -55,7 +55,8 @@ export const useUpdateBasketDevice = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (body: { basketId: number; deviceId: number; quantity: number }) => apiBasket.updateDevice(body),
+    mutationFn: (body: { basketId: number; deviceId?: number; deviceItemId?: number; quantity: number }) =>
+      apiBasket.updateDevice(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["basket"] })
     },
@@ -66,7 +67,8 @@ export const useRemoveBasketDevice = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (body: { basketId: number; deviceId: number }) => apiBasket.removeDevice(body),
+    mutationFn: (body: { basketId: number; deviceId?: number; deviceItemId?: number }) =>
+      apiBasket.removeDevice(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["basket"] })
     },

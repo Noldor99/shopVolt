@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { resolveLocaleFromRequest } from "@/lib/request-locale"
 import { toSlug } from "@/lib/category-slug"
 import { localizeInfoLabel } from "@/lib/localize-entities"
+import { validateRequest } from "@/lib/validate-request"
 import { prisma } from "@/prisma/prisma-client"
+import { DeviceSchema } from "@/schema/device"
 
 type TranslationInput = {
   locale?: unknown
@@ -24,6 +26,22 @@ type DeviceInfoInput = {
   translations?: unknown
 }
 
+type DeviceItemPropertyInput = {
+  categoryAttributeId?: unknown
+  valueUa?: unknown
+  valueEn?: unknown
+}
+
+type DeviceItemInput = {
+  sku?: unknown
+  priceUah?: unknown
+  oldPriceUah?: unknown
+  stockCount?: unknown
+  inStock?: unknown
+  mainImage?: unknown
+  properties?: unknown
+}
+
 type DeviceTranslationLike = {
   locale: string
   name: string
@@ -37,8 +55,16 @@ type CategoryTranslationLike = {
 
 type InfoTranslationLike = {
   locale: string
-  key: string
   value: string
+}
+
+type AttributeTranslationLike = {
+  locale: string
+  name: string
+}
+
+type NormalizedInfoItem = {
+  translations: Array<{ locale: string; key: string; value: string }>
 }
 
 const parseIntParam = (value: string | null) => {
@@ -167,6 +193,213 @@ const normalizeInfoInput = (items: DeviceInfoInput[] | undefined) => {
   })
 }
 
+const hashString = (value: string) => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash).toString(36)
+}
+
+const toStableCode = (value: string, fallbackPrefix: string) => {
+  const slug = toSlug(value)
+  return slug || `${fallbackPrefix}-${hashString(value)}`
+}
+
+const ensureAttributeValueForCategoryAttribute = async (
+  categoryAttributeId: number,
+  valueUa: string,
+  valueEn: string
+) => {
+  const categoryAttribute = await prisma.categoryAttribute.findUnique({
+    where: { id: categoryAttributeId },
+    select: { attributeId: true },
+  })
+  if (!categoryAttribute) return null
+
+  const rawValue = valueEn || valueUa
+  const code = toStableCode(rawValue, "value")
+
+  const attributeValue = await prisma.attributeValue.upsert({
+    where: {
+      attributeId_code: {
+        attributeId: categoryAttribute.attributeId,
+        code,
+      },
+    },
+    update: {},
+    create: {
+      attributeId: categoryAttribute.attributeId,
+      code,
+    },
+    select: { id: true },
+  })
+
+  if (valueUa) {
+    await prisma.attributeValueTranslation.upsert({
+      where: {
+        attributeValueId_locale: {
+          attributeValueId: attributeValue.id,
+          locale: "ua",
+        },
+      },
+      update: { value: valueUa },
+      create: {
+        attributeValueId: attributeValue.id,
+        locale: "ua",
+        value: valueUa,
+      },
+    })
+  }
+
+  if (valueEn) {
+    await prisma.attributeValueTranslation.upsert({
+      where: {
+        attributeValueId_locale: {
+          attributeValueId: attributeValue.id,
+          locale: "en",
+        },
+      },
+      update: { value: valueEn },
+      create: {
+        attributeValueId: attributeValue.id,
+        locale: "en",
+        value: valueEn,
+      },
+    })
+  }
+
+  return attributeValue.id
+}
+
+const ensureInfoBinding = async (categoryId: number, infoItem: NormalizedInfoItem) => {
+  const ua = infoItem.translations.find((tr) => tr.locale === "ua")
+  const en = infoItem.translations.find((tr) => tr.locale === "en")
+  const first = infoItem.translations[0]
+  if (!first) return null
+
+  const keyUa = ua?.key || first.key
+  const keyEn = en?.key || keyUa
+  const valueUa = ua?.value || first.value
+  const valueEn = en?.value || valueUa
+
+  const attributeCode = toStableCode(keyEn || keyUa, "attr")
+  const attribute = await prisma.attribute.upsert({
+    where: { code: attributeCode },
+    update: {},
+    create: { code: attributeCode },
+    select: { id: true },
+  })
+
+  await prisma.attributeTranslation.upsert({
+    where: {
+      attributeId_locale: {
+        attributeId: attribute.id,
+        locale: "ua",
+      },
+    },
+    update: { name: keyUa },
+    create: {
+      attributeId: attribute.id,
+      locale: "ua",
+      name: keyUa,
+    },
+  })
+  await prisma.attributeTranslation.upsert({
+    where: {
+      attributeId_locale: {
+        attributeId: attribute.id,
+        locale: "en",
+      },
+    },
+    update: { name: keyEn },
+    create: {
+      attributeId: attribute.id,
+      locale: "en",
+      name: keyEn,
+    },
+  })
+
+  const categoryAttribute = await prisma.categoryAttribute.upsert({
+    where: {
+      categoryId_attributeId: {
+        categoryId,
+        attributeId: attribute.id,
+      },
+    },
+    update: {},
+    create: {
+      categoryId,
+      attributeId: attribute.id,
+    },
+    select: { id: true, attributeId: true },
+  })
+
+  const valueId = await ensureAttributeValueForCategoryAttribute(categoryAttribute.id, valueUa, valueEn)
+  if (!valueId) return null
+
+  return {
+    categoryAttributeId: categoryAttribute.id,
+    attributeValueId: valueId,
+  }
+}
+
+const normalizeDeviceItemsInput = (items: DeviceItemInput[] | undefined) => {
+  if (!items?.length) return []
+
+  return items
+    .map((item) => {
+      const sku = typeof item?.sku === "string" ? item.sku.trim() : ""
+      const mainImage = typeof item?.mainImage === "string" ? item.mainImage.trim() : ""
+      const priceUah = Number(item?.priceUah)
+      const oldPriceRaw = item?.oldPriceUah
+      const oldPriceUah =
+        oldPriceRaw === null || oldPriceRaw === undefined || oldPriceRaw === ""
+          ? null
+          : Number(oldPriceRaw)
+      const stockCount = Number(item?.stockCount)
+      const inStock = typeof item?.inStock === "boolean" ? item.inStock : true
+      const propertiesRaw = Array.isArray(item?.properties) ? (item.properties as DeviceItemPropertyInput[]) : []
+
+      if (!sku || !mainImage || !Number.isFinite(priceUah) || !Number.isFinite(stockCount)) return null
+      if (oldPriceUah !== null && !Number.isFinite(oldPriceUah)) return null
+
+      const properties = propertiesRaw
+        .map((property) => {
+          const categoryAttributeId = Number(property?.categoryAttributeId)
+          const valueUa = typeof property?.valueUa === "string" ? property.valueUa.trim() : ""
+          const valueEn = typeof property?.valueEn === "string" ? property.valueEn.trim() : ""
+          if (!Number.isInteger(categoryAttributeId) || categoryAttributeId <= 0 || !valueUa || !valueEn) return null
+          return { categoryAttributeId, valueUa, valueEn }
+        })
+        .filter(
+          (property): property is { categoryAttributeId: number; valueUa: string; valueEn: string } => Boolean(property)
+        )
+
+      return {
+        sku,
+        mainImage,
+        priceUah: Math.trunc(priceUah),
+        oldPriceUah: oldPriceUah === null ? null : Math.trunc(oldPriceUah),
+        stockCount: Math.trunc(stockCount),
+        inStock,
+        properties,
+      }
+    })
+    .filter(
+      (item): item is {
+        sku: string
+        mainImage: string
+        priceUah: number
+        oldPriceUah: number | null
+        stockCount: number
+        inStock: boolean
+        properties: Array<{ categoryAttributeId: number; valueUa: string; valueEn: string }>
+      } => Boolean(item)
+    )
+}
+
 const getUniqueDeviceSlug = async (baseName: string, excludeId?: number) => {
   const base = toSlug(baseName) || "device"
   let slug = base
@@ -238,7 +471,6 @@ export async function GET(req: NextRequest) {
   const categoryId = parseIntParam(req.nextUrl.searchParams.get("categoryId"))
   const categorySlug = req.nextUrl.searchParams.get("categorySlug")?.trim()
   const brandId = parseIntParam(req.nextUrl.searchParams.get("brandId"))
-  const deviceType = req.nextUrl.searchParams.get("deviceType")?.trim()
   const inStockRaw = req.nextUrl.searchParams.get("inStock")
   const inStock = inStockRaw === "true" ? true : inStockRaw === "false" ? false : null
   const minPrice = parseIntParam(req.nextUrl.searchParams.get("minPrice"))
@@ -269,7 +501,6 @@ export async function GET(req: NextRequest) {
     })
   }
   if (brandId) andConditions.push({ brandId })
-  if (deviceType) andConditions.push({ deviceType })
   if (inStock !== null) andConditions.push({ inStock })
 
   if (minPrice !== null || maxPrice !== null) {
@@ -297,14 +528,34 @@ export async function GET(req: NextRequest) {
       andConditions.push({
         info: {
           some: {
-            translations: {
-              some: {
-                OR: getInfoKeyCandidates(info.key).map((candidate) => ({
-                  key: candidate,
-                  value: { in: info.values },
-                })),
+            AND: [
+              {
+                categoryAttribute: {
+                  is: {
+                    attribute: {
+                      is: {
+                        translations: {
+                          some: {
+                            name: { in: getInfoKeyCandidates(info.key) },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
               },
-            },
+              {
+                attributeValue: {
+                  is: {
+                    translations: {
+                      some: {
+                        value: { in: info.values },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
           },
         },
       })
@@ -332,7 +583,20 @@ export async function GET(req: NextRequest) {
         brand: true,
         info: {
           include: {
-            translations: true,
+            categoryAttribute: {
+              include: {
+                attribute: {
+                  include: {
+                    translations: true,
+                  },
+                },
+              },
+            },
+            attributeValue: {
+              include: {
+                translations: true,
+              },
+            },
           },
         },
       },
@@ -366,16 +630,20 @@ export async function GET(req: NextRequest) {
         }
         : device.brand,
       info: device.info.map((item: any) => {
-        const localized = getPreferredTranslation<InfoTranslationLike>(
-          item.translations as InfoTranslationLike[] | undefined,
+        const keyTranslation = getPreferredTranslation<AttributeTranslationLike>(
+          item.categoryAttribute?.attribute?.translations as AttributeTranslationLike[] | undefined,
+          locale
+        )
+        const valueTranslation = getPreferredTranslation<InfoTranslationLike>(
+          item.attributeValue?.translations as InfoTranslationLike[] | undefined,
           locale
         )
         return {
           ...item,
-          key: localized?.key ?? "",
-          value: localized?.value ?? "",
-          keyLocalized: localized?.key ?? "",
-          valueLocalized: localized?.value ?? "",
+          key: keyTranslation?.name ?? "",
+          value: valueTranslation?.value ?? "",
+          keyLocalized: keyTranslation?.name ?? "",
+          valueLocalized: valueTranslation?.value ?? "",
         }
       }),
     }
@@ -395,17 +663,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Record<string, unknown>
-    const imageUrl = typeof body?.imageUrl === "string" ? body.imageUrl.trim() : ""
-    const imageUrls = Array.isArray(body?.imageUrls)
-      ? body.imageUrls.filter((item: unknown): item is string => typeof item === "string").map((item) => item.trim())
-      : []
+    const { data: body, errorResponse } = await validateRequest(req, DeviceSchema)
+    if (errorResponse || !body) return errorResponse
 
-    const translations = normalizeDeviceTranslations(body)
-    const info = normalizeInfoInput(Array.isArray(body?.info) ? (body.info as DeviceInfoInput[]) : undefined)
+    const imageUrls = (body.imageUrls ?? []).map((item) => item.trim())
+    const imageUrl = (body.imageUrl ?? imageUrls[0] ?? "").trim()
 
-    const categoryId = Number(body?.categoryId)
-    const brandId = body?.brandId === null || body?.brandId === undefined ? null : Number(body?.brandId)
+    const translations = normalizeDeviceTranslations(body as unknown as Record<string, unknown>)
+    const info = normalizeInfoInput(body.info as unknown as DeviceInfoInput[] | undefined)
+    const items = normalizeDeviceItemsInput(body.items as unknown as DeviceItemInput[] | undefined)
+
+    const categoryId = body.categoryId
+    const brandId = body.brandId ?? null
 
     const uaTranslation = translations.find((item) => item.locale === "ua")
     const enTranslation = translations.find((item) => item.locale === "en")
@@ -414,15 +683,41 @@ export async function POST(req: NextRequest) {
     if (!uaTranslation || !enTranslation) {
       return NextResponse.json({ error: "Both Ukrainian and English translations are required" }, { status: 400 })
     }
-    if (!imageUrl) return NextResponse.json({ error: "Device imageUrl is required" }, { status: 400 })
-    if (!Number.isInteger(categoryId) || categoryId <= 0) {
-      return NextResponse.json({ error: "Valid categoryId is required" }, { status: 400 })
-    }
-    if (brandId !== null && (!Number.isInteger(brandId) || brandId <= 0)) {
-      return NextResponse.json({ error: "brandId must be a positive integer or null" }, { status: 400 })
-    }
-
     const slug = await getUniqueDeviceSlug(baseName)
+
+    const preparedInfo = (
+      await Promise.all(info.map((item) => ensureInfoBinding(categoryId, item as NormalizedInfoItem)))
+    ).filter(
+      (item): item is { categoryAttributeId: number; attributeValueId: number } => Boolean(item)
+    )
+
+    const preparedItems = await Promise.all(
+      items.map(async (item) => {
+        const mappedProperties = (
+          await Promise.all(
+            item.properties.map(async (property) => {
+              const attributeValueId = await ensureAttributeValueForCategoryAttribute(
+                property.categoryAttributeId,
+                property.valueUa,
+                property.valueEn
+              )
+              if (!attributeValueId) return null
+              return {
+                categoryAttributeId: property.categoryAttributeId,
+                attributeValueId,
+              }
+            })
+          )
+        ).filter(
+          (property): property is { categoryAttributeId: number; attributeValueId: number } => Boolean(property)
+        )
+
+        return {
+          ...item,
+          properties: mappedProperties,
+        }
+      })
+    )
 
     const device = await prisma.device.create({
       data: {
@@ -431,22 +726,41 @@ export async function POST(req: NextRequest) {
         imageUrls,
         categoryId,
         brandId,
-        deviceType: (body?.deviceType as string) ?? "OTHER",
-        priceUah: typeof body?.priceUah === "number" ? body.priceUah : null,
-        oldPriceUah: typeof body?.oldPriceUah === "number" ? body.oldPriceUah : null,
-        rating: typeof body?.rating === "number" ? body.rating : null,
-        reviewsCount: typeof body?.reviewsCount === "number" ? body.reviewsCount : null,
-        inStock: typeof body?.inStock === "boolean" ? body.inStock : true,
-        stockCount: typeof body?.stockCount === "number" ? body.stockCount : null,
+        deviceType: body.deviceType ?? "OTHER",
+        priceUah: body.priceUah ?? null,
+        oldPriceUah: body.oldPriceUah ?? null,
+        rating: body.rating ?? null,
+        reviewsCount: body.reviewsCount ?? null,
+        inStock: body.inStock ?? true,
+        stockCount: body.stockCount ?? null,
         translations: {
           create: translations,
         },
         info: info.length
           ? {
-            create: info.map((item) => ({
-              translations: {
-                create: item.translations,
-              },
+            create: preparedInfo.map((item) => ({
+              categoryAttributeId: item.categoryAttributeId,
+              attributeValueId: item.attributeValueId,
+            })),
+          }
+          : undefined,
+        items: preparedItems.length
+          ? {
+            create: preparedItems.map((item) => ({
+              sku: item.sku,
+              priceUah: item.priceUah,
+              oldPriceUah: item.oldPriceUah,
+              stockCount: item.stockCount,
+              inStock: item.inStock,
+              mainImage: item.mainImage,
+              properties: item.properties.length
+                ? {
+                  create: item.properties.map((property) => ({
+                    categoryAttributeId: property.categoryAttributeId,
+                    attributeValueId: property.attributeValueId,
+                  })),
+                }
+                : undefined,
             })),
           }
           : undefined,
@@ -461,7 +775,33 @@ export async function POST(req: NextRequest) {
         brand: true,
         info: {
           include: {
-            translations: true,
+            categoryAttribute: {
+              include: {
+                attribute: {
+                  include: {
+                    translations: true,
+                  },
+                },
+              },
+            },
+            attributeValue: {
+              include: {
+                translations: true,
+              },
+            },
+          },
+        },
+        items: {
+          include: {
+            properties: {
+              include: {
+                attributeValue: {
+                  include: {
+                    translations: true,
+                  },
+                },
+              },
+            },
           },
         },
       },

@@ -2,7 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { ICategorySchema, apiCategory } from "@/actions/client/categoryAction"
+import {
+  ICategorySchema,
+  QueryCategoryAttributesParams,
+  QueryCategoryBrandsParams,
+  apiCategory,
+} from "@/actions/client/categoryAction"
 
 export const useGetCategory = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({
@@ -16,6 +21,28 @@ export const useGetCategoryById = (id: string | number, enabled = true) =>
     queryKey: ["category", id],
     queryFn: () => apiCategory.getOne(id),
     enabled: Boolean(id) && enabled,
+  })
+
+export const useGetCategoryBrands = (
+  idOrSlug: string | number,
+  params?: QueryCategoryBrandsParams,
+  enabled = true
+) =>
+  useQuery({
+    queryKey: ["category", idOrSlug, "brands", params ?? {}],
+    queryFn: () => apiCategory.getBrands(idOrSlug, params),
+    enabled: Boolean(idOrSlug) && enabled,
+  })
+
+export const useGetCategoryAttributes = (
+  idOrSlug: string | number,
+  params?: QueryCategoryAttributesParams,
+  enabled = true
+) =>
+  useQuery({
+    queryKey: ["category", idOrSlug, "attributes", params ?? {}],
+    queryFn: () => apiCategory.getAttributes(idOrSlug, params),
+    enabled: Boolean(idOrSlug) && enabled,
   })
 
 export const useCreateCategory = () => {

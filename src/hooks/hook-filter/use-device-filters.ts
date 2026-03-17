@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getLocaleFromPathname, stripLocaleFromPathname } from '@/lib/i18n'
 import { localizeInfoLabel } from '@/lib/localize-entities'
 
-import { usePriceFilters } from '@/hooks/use-price-filters'
 import { useAccordion } from '@/hooks/useAccordion'
 import { IDeviceFiltersResponse } from '@/types/device'
 import { FilterConfig } from '@/types/filter'
@@ -19,7 +18,6 @@ export const useDeviceFilters = () => {
   const searchParams = useSearchParams()
   const [serverFilters, setServerFilters] = useState<IDeviceFiltersResponse | null>(null)
 
-  const { minPrice, maxPrice, minLimit, maxLimit } = usePriceFilters(pathname)
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname])
   const categorySlug = useMemo(() => {
     const cleanPathname = stripLocaleFromPathname(pathname)
@@ -180,10 +178,6 @@ export const useDeviceFilters = () => {
 
   return {
     activeFilters,
-    minPrice,
-    maxPrice,
-    minLimit,
-    maxLimit,
     isSectionOpen,
     toggleSection,
     getSelectedOptions,

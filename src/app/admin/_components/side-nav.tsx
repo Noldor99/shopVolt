@@ -46,6 +46,11 @@ export const SIDENAV_ITEMS: SideNavItem[] = [
     icon: <IconDevices size={24} />,
   },
   {
+    title: 'Brands',
+    path: '/admin/brand',
+    icon: <IconDevices size={24} />,
+  },
+  {
     title: 'Messages',
     path: '/admin/messages',
     icon: <IconMail size={24} />,

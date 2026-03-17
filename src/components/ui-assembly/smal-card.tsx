@@ -1,6 +1,6 @@
-import React, { ReactNode } from "react"
+import React, { ReactNode } from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 interface SmalCardIconProps {
   img?: ReactNode
@@ -15,16 +15,16 @@ const SmalCard = (props: SmalCardIconProps) => {
   return (
     <div
       className={cn(
-        "flex w-full items-center justify-between bg-white shadow-md",
-        "flex-col sm:flex-row"
+        'flex w-full items-center justify-between bg-white shadow-md',
+        'flex-col sm:flex-row'
       )}
     >
       {img && <div className={`w-full sm:flex-[${imgWidth}px]`}>{img}</div>}
 
       <div
         className={cn(
-          "flex-col sm:flex-row",
-          "flex w-full gap-3 p-5 sm:items-center sm:justify-between"
+          'flex-col sm:flex-row',
+          'flex w-full gap-3 p-5 sm:items-center sm:justify-between'
         )}
       >
         <div className="flex flex-col">

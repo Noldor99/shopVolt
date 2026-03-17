@@ -1,5 +1,7 @@
-import Link from 'next/link'
+import { prisma } from '@/prisma/prisma-client'
+
 import { getServerSession } from 'next-auth'
+import Link from 'next/link'
 
 import { PaginationServer } from '@/components/pagination/pagination-server'
 import { FavoriteButton } from '@/components/shared/FavoriteButton'
@@ -14,7 +16,6 @@ import { authOptions } from '@/lib/auth'
 import { withLocalePath } from '@/lib/i18n'
 import { getServerLocale } from '@/lib/server-locale'
 import { cn } from '@/lib/utils'
-import { prisma } from '@/prisma/prisma-client'
 
 import { IDevicesResponse } from '@/types/device'
 
@@ -164,7 +165,6 @@ export const DeviceCard = async ({ searchParams, params }: PageProps) => {
                   </CardTitle>
                   <p className="text-sm text-slate-500">
                     {device.brand?.name ?? (locale === 'ua' ? 'Без бренду' : 'No brand')} |{' '}
-                    {getLocalizedDeviceType(device.deviceType, locale)}
                   </p>
                 </CardContent>
               </div>

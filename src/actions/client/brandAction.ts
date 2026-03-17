@@ -2,19 +2,28 @@ import { AxiosResponse } from "axios"
 import { z } from "zod"
 
 import { api } from "@/lib/axios"
-import { IBrand } from "@/types/brand"
+import { IBrand, IBrandDetails } from "@/types/brand"
 
 export const BrandSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  categoryIds: z.array(z.coerce.number().int().positive()).optional(),
 })
 
 export type IBrandSchema = z.infer<typeof BrandSchema>
 
+export const BrandUpdateSchema = z.object({
+  name: z.string().min(1, "Name is required").optional(),
+  addCategoryIds: z.array(z.coerce.number().int().positive()).optional(),
+  removeCategoryIds: z.array(z.coerce.number().int().positive()).optional(),
+})
+
+export type IBrandUpdateSchema = z.infer<typeof BrandUpdateSchema>
+
 export interface ApiBrand {
   getAll: () => Promise<IBrand[]>
-  getOne: (id: string | number) => Promise<IBrand>
+  getOne: (id: string | number) => Promise<IBrandDetails>
   create: (body: IBrandSchema) => Promise<IBrand>
-  update: (id: string | number, body: Partial<IBrandSchema>) => Promise<IBrand>
+  update: (id: string | number, body: IBrandUpdateSchema) => Promise<IBrand>
   remove: (id: string | number) => Promise<{ ok: boolean }>
 }
 

@@ -16,9 +16,9 @@ import {
 } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
+import { useCategoryTotal } from '../../hooks/hook-filter/use-category-total'
 import { FilterChips } from '../filter/filter-chips'
 import { FilterTogleGroup } from '../filter/filter-togle-group'
-import { useCategoryTotal } from './hook/use-category-total'
 import { SheetFilter } from './sheet-filter'
 
 type CategoryItem = {

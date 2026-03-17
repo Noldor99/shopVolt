@@ -405,12 +405,13 @@ export const OrderForm = ({ locale }: OrderFormProps) => {
       })
 
       await Promise.all(
-        items.map((item) =>
-          apiBasket.removeDevice({
-            basketId: currentBasket.id,
-            deviceId: item.deviceId,
-          })
-        )
+        items
+          .map((item) => item.deviceId)
+          .filter(
+            (deviceId): deviceId is number =>
+              typeof deviceId === 'number' && Number.isInteger(deviceId) && deviceId > 0
+          )
+          .map((deviceId) => apiBasket.removeDevice({ basketId: currentBasket.id, deviceId }))
       )
       await queryClient.invalidateQueries({ queryKey: ['basket'] })
 

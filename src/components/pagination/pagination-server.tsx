@@ -1,8 +1,12 @@
-"use server"
+'use server'
 
-import { cn } from "@/lib/utils"
-import Link from "next/link"
-import React from "react"
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+import Link from 'next/link'
+
+import React from 'react'
+
+import { cn } from '@/lib/utils'
 
 type PaginationProps = {
   page?: number
@@ -22,7 +26,7 @@ export const PaginationServer = (props: PaginationProps) => {
         queryParams.push(`${key}=${param[key]}`)
       }
     })
-    return queryParams.join("&")
+    return queryParams.join('&')
   }
 
   const currentPage = Math.min(Math.max(Number(page), 1), totalPages)
@@ -51,12 +55,15 @@ export const PaginationServer = (props: PaginationProps) => {
     <div className="flex items-center justify-center space-x-6 text-black">
       <Link
         className={cn(
-          "rounded-md border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50",
-          currentPage === 1 ? "pointer-events-none bg-gray-100" : ""
+          'rounded-md border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50',
+          currentPage === 1 ? 'pointer-events-none bg-gray-100' : ''
         )}
         href={`?${buildQueryParam(currentPage - 1)}`}
       >
-        Previous
+        <span className="sm:hidden" aria-label="Previous page">
+          <ChevronLeft className="h-4 w-4" />
+        </span>
+        <span className="hidden sm:inline">Previous</span>
       </Link>
 
       <nav aria-label="Pagination" className="relative z-0 inline-flex -space-x-px rounded-md">
@@ -64,10 +71,10 @@ export const PaginationServer = (props: PaginationProps) => {
           <Link
             key={p}
             className={cn(
-              "relative inline-flex items-center border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50",
-              p === currentPage ? "pointer-events-none bg-gray-100" : "",
-              i === 0 ? "rounded-l-md" : "",
-              i === pages.length - 1 ? "rounded-r-md" : ""
+              'relative inline-flex items-center border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50',
+              p === currentPage ? 'pointer-events-none bg-gray-100' : '',
+              i === 0 ? 'rounded-l-md' : '',
+              i === pages.length - 1 ? 'rounded-r-md' : ''
             )}
             href={`?${buildQueryParam(p)}`}
           >
@@ -78,12 +85,15 @@ export const PaginationServer = (props: PaginationProps) => {
 
       <Link
         className={cn(
-          "rounded-md border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50",
-          !hasNextPage || currentPage >= totalPages ? "pointer-events-none bg-gray-100" : ""
+          'rounded-md border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50',
+          !hasNextPage || currentPage >= totalPages ? 'pointer-events-none bg-gray-100' : ''
         )}
         href={`?${buildQueryParam(currentPage + 1)}`}
       >
-        Next
+        <span className="sm:hidden" aria-label="Next page">
+          <ChevronRight className="h-4 w-4" />
+        </span>
+        <span className="hidden sm:inline">Next</span>
       </Link>
     </div>
   )

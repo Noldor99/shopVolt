@@ -1,51 +1,9 @@
 import { AxiosResponse } from "axios"
-import { z } from "zod"
 
 import { api } from "@/lib/axios"
+import { DeviceSchema } from "@/schema/device"
+import type { IDeviceInfoInput, IDeviceSchema } from "@/schema/device"
 import { IDevice, IDeviceFiltersResponse, IDeviceInfo, IDevicesResponse } from "@/types/device"
-
-const DeviceInfoSchema = z.object({
-  key: z.string().min(1, "key is required").optional(),
-  value: z.string().min(1).optional(),
-  values: z.array(z.string().min(1)).optional(),
-  translations: z
-    .array(
-      z.object({
-        locale: z.string().min(2),
-        key: z.string().min(1),
-        value: z.string().min(1),
-      })
-    )
-    .optional(),
-})
-
-export const DeviceSchema = z.object({
-  name: z.string().min(1, "Name is required").optional(),
-  translations: z
-    .array(
-      z.object({
-        locale: z.string().min(2),
-        name: z.string().min(1),
-        description: z.string().optional().nullable(),
-      })
-    )
-    .optional(),
-  imageUrl: z.string().url("Valid imageUrl is required"),
-  imageUrls: z.array(z.string().url()).default([]),
-  deviceType: z.enum(["TABLET", "MONITOR", "OTHER"]).default("OTHER"),
-  categoryId: z.coerce.number().int().positive(),
-  brandId: z.coerce.number().int().positive().nullable().optional(),
-  priceUah: z.coerce.number().int().nullable().optional(),
-  oldPriceUah: z.coerce.number().int().nullable().optional(),
-  rating: z.coerce.number().nullable().optional(),
-  reviewsCount: z.coerce.number().int().nullable().optional(),
-  inStock: z.boolean().optional(),
-  stockCount: z.coerce.number().int().nullable().optional(),
-  info: z.array(DeviceInfoSchema).optional().default([]),
-})
-
-export type IDeviceSchema = z.infer<typeof DeviceSchema>
-export type IDeviceInfoInput = z.infer<typeof DeviceInfoSchema>
 
 export interface QueryDeviceParams {
   lang?: "ua" | "en"
@@ -66,6 +24,7 @@ export interface QueryDeviceParams {
 }
 
 export interface QueryDeviceFilterParams {
+  lang?: "ua" | "en"
   categoryId?: string | number
   categorySlug?: string
   brandId?: string | number
@@ -96,4 +55,6 @@ export const apiDevice: ApiDevice = {
 
 const unwrapData = <T>(response: AxiosResponse<T>): T => response.data
 
+export { DeviceSchema }
+export type { IDeviceInfoInput, IDeviceSchema }
 export type { IDeviceInfo }

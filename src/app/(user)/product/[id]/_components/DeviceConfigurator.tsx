@@ -9,7 +9,6 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import { QuantitySelector } from '@/components/shared/QuantitySelector'
 import { Button } from '@/components/ui/button'
-import { GroupVariants } from '@/components/ui/group-variants'
 
 import { apiBasket } from '@/actions/client/basketAction'
 
@@ -20,26 +19,13 @@ import { getOrCreateBasketToken } from '@/lib/basket-token'
 import { Locale } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-import { IDevice } from '@/types/device'
+import { IDevice, IDeviceItem, IDeviceItemProperty } from '@/types/device'
 
 import { DeviceGallery } from './DeviceGallery'
 
 type DeviceConfiguratorProps = {
   device: IDevice
   locale?: Locale
-}
-
-const DEVICE_TYPE_LABELS: Record<Locale, Record<IDevice['deviceType'], string>> = {
-  ua: {
-    TABLET: 'Планшет',
-    MONITOR: 'Монітор',
-    OTHER: 'Техніка',
-  },
-  en: {
-    TABLET: 'Tablet',
-    MONITOR: 'Monitor',
-    OTHER: 'Device',
-  },
 }
 
 const SPEC_PRIORITY = [
@@ -64,23 +50,8 @@ const SPEC_PRIORITY = [
   'акумулятор',
 ] as const
 
-const COLOR_KEYWORDS = ['color', 'colour', 'колір']
-
-const COLOR_SWATCHES = [
-  { match: ['black', 'graphite', 'space gray', 'чорн', 'графіт'], color: '#111827' },
-  { match: ['white', 'silver', 'starlight', 'білий', 'срібл', 'silver'], color: '#e5e7eb' },
-  { match: ['blue', 'син', 'блакит'], color: '#3b82f6' },
-  { match: ['green', 'зел'], color: '#22c55e' },
-  { match: ['red', 'черв'], color: '#ef4444' },
-  { match: ['pink', 'рож'], color: '#ec4899' },
-  { match: ['purple', 'violet', 'фіолет'], color: '#8b5cf6' },
-  { match: ['gold', 'yellow', 'золот', 'жовт'], color: '#f59e0b' },
-]
-
 const normalizeValue = (value?: string | null) => value?.trim().toLowerCase() ?? ''
-
-const isColorKey = (value: string) =>
-  COLOR_KEYWORDS.some((keyword) => normalizeValue(value).includes(keyword))
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 const getInfoLabel = (
   key?: string | null,
@@ -91,14 +62,30 @@ const getInfoLabel = (
 const getInfoValue = (value?: string | null, valueLocalized?: string | null) =>
   valueLocalized?.trim() || value?.trim() || 'N/A'
 
-const getColorSwatch = (value: string) => {
-  const normalized = normalizeValue(value)
-  const preset = COLOR_SWATCHES.find((item) =>
-    item.match.some((keyword) => normalized.includes(keyword))
-  )
+const isHexColor = (value?: string | null) => HEX_COLOR_RE.test(value?.trim() ?? '')
 
-  return preset?.color ?? '#cbd5e1'
+const getLocalizedAttributeName = (
+  property: IDeviceItemProperty,
+  locale: Locale,
+  fallback = 'Option'
+) => {
+  const translations = property.categoryAttribute?.attribute?.translations ?? []
+  const preferredLocale = locale === 'en' ? 'en' : 'ua'
+  const fallbackLocale = preferredLocale === 'en' ? 'ua' : 'en'
+
+  return (
+    translations.find((item) => item.locale === preferredLocale)?.name?.trim() ||
+    translations.find((item) => item.locale === fallbackLocale)?.name?.trim() ||
+    property.categoryAttribute?.attribute?.code?.trim() ||
+    fallback
+  )
 }
+
+const getLocalizedPropertyValue = (property: IDeviceItemProperty, locale: Locale) =>
+  (locale === 'en' ? property.valueEn : property.valueUa)?.trim() ||
+  (locale === 'en' ? property.valueUa : property.valueEn)?.trim() ||
+  property.attributeValue?.code?.trim() ||
+  ''
 
 export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfiguratorProps) => {
   const isEn = locale === 'en'
@@ -122,11 +109,10 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
     warrantyTime: isEn ? '12 months' : '12 міс.',
     warrantyHint: isEn ? 'Support and service after purchase' : 'Підтримка та сервіс після покупки',
     intro: isEn
-      ? 'Modern device for work, study and entertainment. Choose a color, review specs and add to cart in seconds.'
-      : 'Сучасний девайс для щоденної роботи, навчання та розваг. Обери колір, переглянь характеристики та швидко додай модель у кошик.',
+      ? 'Modern device for work, study and entertainment. Choose the right configuration, review specs and add it to cart in seconds.'
+      : 'Сучасний девайс для щоденної роботи, навчання та розваг. Обери потрібну конфігурацію, переглянь характеристики та швидко додай модель у кошик.',
     rating: isEn ? 'Rating' : 'Рейтинг',
-    color: isEn ? 'Color' : 'Колір',
-    availableShade: isEn ? 'Available shade' : 'Доступний відтінок',
+    options: isEn ? 'Available options' : 'Доступні варіанти',
     keySpecs: isEn ? 'Key specifications' : 'Ключові характеристики',
     quantity: isEn ? 'Quantity' : 'Кількість',
     selected: isEn ? 'Selected' : 'Обрано',
@@ -163,15 +149,137 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
     ? (device.brand?.name ?? device.brand?.nameLocalized ?? t.brandFallback)
     : (device.brand?.nameLocalized ?? device.brand?.name ?? t.brandFallback)
 
+  const deviceItems = useMemo(() => device.items ?? [], [device.items])
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(deviceItems[0]?.id ?? null)
+
+  useEffect(() => {
+    if (deviceItems.length === 0) {
+      setSelectedItemId(null)
+      return
+    }
+
+    if (!deviceItems.some((item) => item.id === selectedItemId)) {
+      setSelectedItemId(deviceItems[0]?.id ?? null)
+    }
+  }, [deviceItems, selectedItemId])
+
+  const selectedItem = useMemo(
+    () => deviceItems.find((item) => item.id === selectedItemId) ?? deviceItems[0] ?? null,
+    [deviceItems, selectedItemId]
+  )
+
+  const allPropertyGroups = useMemo(() => {
+    const groupMap = new Map<
+      number,
+      {
+        categoryAttributeId: number
+        code: string
+        name: string
+        options: Map<
+          number,
+          {
+            attributeValueId: number
+            label: string
+            displayValue: string
+            visualValue: string | null
+          }
+        >
+      }
+    >()
+
+    deviceItems.forEach((item) => {
+      ;(item.properties ?? []).forEach((property) => {
+        const categoryAttributeId = Number(property.categoryAttributeId)
+        const attributeValueId = Number(property.attributeValueId)
+        if (!Number.isInteger(categoryAttributeId) || !Number.isInteger(attributeValueId)) return
+
+        const groupName = getLocalizedAttributeName(property, locale, isEn ? 'Option' : 'Опція')
+        const optionLabel = getLocalizedPropertyValue(property, locale)
+        const visualValue =
+          (
+            property.attributeValue as
+              | {
+                  visualValue?: string | null
+                }
+              | null
+              | undefined
+          )?.visualValue?.trim() || null
+
+        const existingGroup =
+          groupMap.get(categoryAttributeId) ??
+          {
+            categoryAttributeId,
+            code: property.categoryAttribute?.attribute?.code ?? String(categoryAttributeId),
+            name: groupName,
+            options: new Map<number, { attributeValueId: number; label: string; displayValue: string; visualValue: string | null }>(),
+          }
+
+        existingGroup.options.set(attributeValueId, {
+          attributeValueId,
+          label: optionLabel,
+          displayValue: !isHexColor(visualValue) && visualValue ? visualValue : optionLabel,
+          visualValue,
+        })
+
+        groupMap.set(categoryAttributeId, existingGroup)
+      })
+    })
+
+    return [...groupMap.values()]
+      .map((group) => ({
+        categoryAttributeId: group.categoryAttributeId,
+        code: group.code,
+        name: group.name,
+        options: [...group.options.values()],
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name, isEn ? 'en' : 'uk'))
+  }, [deviceItems, isEn, locale])
+
+  const variationGroups = useMemo(
+    () => allPropertyGroups.filter((group) => group.options.length > 1),
+    [allPropertyGroups]
+  )
+
+  const staticPropertyGroups = useMemo(
+    () => allPropertyGroups.filter((group) => group.options.length <= 1),
+    [allPropertyGroups]
+  )
+
+  const selectedOptions = useMemo(() => {
+    return new Map(
+      (selectedItem?.properties ?? []).map((property) => [
+        Number(property.categoryAttributeId),
+        Number(property.attributeValueId),
+      ])
+    )
+  }, [selectedItem])
+
+  const activeGallerySources = useMemo(() => {
+    const values = [
+      selectedItem?.mainImage,
+      ...(device.imageUrls ?? []),
+      device.imageUrl,
+    ].filter((value): value is string => Boolean(value?.trim()))
+
+    return [...new Set(values)]
+  }, [device.imageUrl, device.imageUrls, selectedItem?.mainImage])
+
   const { galleryImages, selectedImage, setSelectedImage } = useDeviceGallery({
-    imageUrl: device.imageUrl,
-    imageUrls: device.imageUrls,
+    imageUrl: activeGallerySources[0] ?? device.imageUrl,
+    imageUrls: activeGallerySources,
   })
+
+  const variationAttributeIds = useMemo(
+    () => new Set(variationGroups.map((group) => group.categoryAttributeId)),
+    [variationGroups]
+  )
 
   const groupedSpecs = useMemo(() => {
     const map = new Map<string, { key: string; label: string; values: string[] }>()
 
-    for (const item of device.info ?? []) {
+    for (const item of (device.info ?? []).filter(
+      (infoItem) => !variationAttributeIds.has(Number(infoItem.categoryAttributeId))
+    )) {
       const label = getInfoLabel(
         item.key,
         item.keyLocalized,
@@ -192,6 +300,26 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
       }
     }
 
+    for (const group of staticPropertyGroups) {
+      const firstOption = group.options[0]
+      const key = normalizeValue(group.name)
+      const value = firstOption?.label?.trim() || firstOption?.displayValue?.trim() || ''
+      if (!key || !value) continue
+
+      const existing = map.get(key)
+      if (existing) {
+        if (!existing.values.includes(value)) {
+          existing.values.push(value)
+        }
+      } else {
+        map.set(key, {
+          key,
+          label: group.name,
+          values: [value],
+        })
+      }
+    }
+
     return [...map.values()].sort((a, b) => {
       const aIndex = SPEC_PRIORITY.findIndex((item) => a.key.includes(item))
       const bIndex = SPEC_PRIORITY.findIndex((item) => b.key.includes(item))
@@ -201,27 +329,82 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
       if (normalizedA !== normalizedB) return normalizedA - normalizedB
       return a.label.localeCompare(b.label, isEn ? 'en' : 'uk')
     })
-  }, [device.info, isEn])
+  }, [device.info, isEn, staticPropertyGroups, variationAttributeIds])
 
-  const colorSpec = useMemo(() => groupedSpecs.find((spec) => isColorKey(spec.key)), [groupedSpecs])
+  const keySpecs = groupedSpecs.slice(0, 6)
+  const otherSpecs = groupedSpecs.slice(6)
 
-  const colorOptions = colorSpec?.values ?? []
-  const [selectedColor, setSelectedColor] = useState(colorOptions[0] ?? '')
-  useEffect(() => {
-    if (!selectedColor || !colorOptions.includes(selectedColor)) {
-      setSelectedColor(colorOptions[0] ?? '')
-    }
-  }, [colorOptions, selectedColor])
-
-  const keySpecs = groupedSpecs.filter((spec) => !isColorKey(spec.key)).slice(0, 6)
-  const otherSpecs = groupedSpecs.filter((spec) => !keySpecs.includes(spec))
-
-  const totalPrice = device.priceUah !== null ? device.priceUah * quantity : null
+  const activePrice = selectedItem?.priceUah ?? device.priceUah
+  const activeOldPrice = selectedItem?.oldPriceUah ?? device.oldPriceUah
+  const activeInStock = selectedItem?.inStock ?? device.inStock
+  const activeStockCount = selectedItem?.stockCount ?? device.stockCount
+  const totalPrice = activePrice !== null ? activePrice * quantity : null
   const hasDiscount =
-    device.oldPriceUah !== null && device.priceUah !== null && device.oldPriceUah > device.priceUah
+    activeOldPrice !== null && activePrice !== null && activeOldPrice > activePrice
   const discountPercent = hasDiscount
-    ? Math.round(((device.oldPriceUah! - device.priceUah!) / device.oldPriceUah!) * 100)
+    ? Math.round(((activeOldPrice! - activePrice!) / activeOldPrice!) * 100)
     : 0
+
+  const selectedVariantSummary = useMemo(() => {
+    return variationGroups
+      .map((group) => {
+        const selectedValueId = selectedOptions.get(group.categoryAttributeId)
+        const selectedOption = group.options.find(
+          (option) => option.attributeValueId === selectedValueId
+        )
+        return selectedOption ? `${group.name}: ${selectedOption.label}` : null
+      })
+      .filter(Boolean)
+      .join(' / ')
+  }, [selectedOptions, variationGroups])
+
+  const hasMatchingItem = (categoryAttributeId: number, attributeValueId: number) => {
+    return deviceItems.some((item) =>
+      variationGroups.every((group) => {
+        const expectedValueId =
+          group.categoryAttributeId === categoryAttributeId
+            ? attributeValueId
+            : selectedOptions.get(group.categoryAttributeId)
+
+        if (!expectedValueId) return true
+
+        return (item.properties ?? []).some(
+          (property) =>
+            Number(property.categoryAttributeId) === group.categoryAttributeId &&
+            Number(property.attributeValueId) === expectedValueId
+        )
+      })
+    )
+  }
+
+  const handleSelectVariantOption = (categoryAttributeId: number, attributeValueId: number) => {
+    const exactMatch = deviceItems.find((item) =>
+      variationGroups.every((group) => {
+        const expectedValueId =
+          group.categoryAttributeId === categoryAttributeId
+            ? attributeValueId
+            : selectedOptions.get(group.categoryAttributeId)
+
+        if (!expectedValueId) return true
+
+        return (item.properties ?? []).some(
+          (property) =>
+            Number(property.categoryAttributeId) === group.categoryAttributeId &&
+            Number(property.attributeValueId) === expectedValueId
+        )
+      })
+    )
+
+    const fallbackMatch = deviceItems.find((item) =>
+      (item.properties ?? []).some(
+        (property) =>
+          Number(property.categoryAttributeId) === categoryAttributeId &&
+          Number(property.attributeValueId) === attributeValueId
+      )
+    )
+
+    setSelectedItemId(exactMatch?.id ?? fallbackMatch?.id ?? selectedItem?.id ?? null)
+  }
 
   const handleAddToBasket = async () => {
     try {
@@ -235,7 +418,7 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
 
       await apiBasket.addDevice({
         basketId: basket.id,
-        deviceId: device.id,
+        ...(selectedItem?.id ? { deviceItemId: selectedItem.id } : { deviceId: device.id }),
         quantity,
       })
 
@@ -245,8 +428,8 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
       ])
 
       toast.success(
-        selectedColor
-          ? `${displayName} (${selectedColor}) ${t.cartAdded}`
+        selectedVariantSummary
+          ? `${displayName} (${selectedVariantSummary}) ${t.cartAdded}`
           : `${displayName} ${t.cartAdded}`
       )
     } catch (error) {
@@ -259,14 +442,40 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
 
   return (
     <div className="grid gap-6 rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-4 shadow-[0_20px_70px_-35px_rgba(15,23,42,0.35)] sm:p-6 lg:grid-cols-[minmax(0,1fr)_460px]">
-      <DeviceGallery
-        images={galleryImages}
-        selectedImage={selectedImage}
-        onSelect={setSelectedImage}
-        deviceName={displayName}
-        categoryName={categoryName}
-        className="border-white/60 bg-white shadow-[0_20px_60px_-35px_rgba(15,23,42,0.4)]"
-      />
+      <div>
+        <DeviceGallery
+          images={galleryImages}
+          selectedImage={selectedImage}
+          onSelect={setSelectedImage}
+          deviceName={displayName}
+          categoryName={categoryName}
+          className="border-white/60 bg-white shadow-[0_20px_60px_-35px_rgba(15,23,42,0.4)]"
+        />
+        {keySpecs.length > 0 && (
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-violet-600" />
+              <h2 className="text-lg font-bold text-slate-950">{t.keySpecs}</h2>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {keySpecs.map((spec) => (
+                <div
+                  key={spec.label}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                >
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    {spec.label}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">
+                    {spec.values.join(' / ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-5">
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -274,10 +483,7 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
             <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
               {categoryName}
             </span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-              {DEVICE_TYPE_LABELS[locale][device.deviceType]}
-            </span>
-            {device.inStock ? (
+            {activeInStock ? (
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                 {t.inStock}
               </span>
@@ -321,7 +527,7 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
                 {t.stock}
               </div>
               <p className="mt-2 text-lg font-bold text-slate-950">
-                {device.stockCount !== null ? `${device.stockCount} ${t.units}` : t.checkStock}
+                {activeStockCount !== null ? `${activeStockCount} ${t.units}` : t.checkStock}
               </p>
               <p className="text-xs text-slate-500">{t.stockRealtime}</p>
             </div>
@@ -346,80 +552,63 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
           </div>
         </div>
 
-        {colorOptions.length > 0 && (
+        {variationGroups.length > 0 && (
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  {t.color}
-                </div>
-                <div className="mt-1 text-lg font-bold text-slate-950">
-                  {selectedColor || colorOptions[0]}
-                </div>
+            <div className="mb-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                {t.options}
               </div>
-              <div className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span
-                  className={cn(
-                    'h-4 w-4 rounded-full border border-slate-300 shadow-inner',
-                    selectedColor &&
-                      getColorSwatch(selectedColor) === '#e5e7eb' &&
-                      'border-slate-400'
-                  )}
-                  style={{ backgroundColor: getColorSwatch(selectedColor || colorOptions[0]) }}
-                />
-                {t.availableShade}
+              <div className="mt-1 text-sm text-slate-600">
+                {selectedVariantSummary || t.defaultConfig}
               </div>
             </div>
 
-            <GroupVariants
-              items={colorOptions.map((value) => ({
-                name: value,
-                value,
-              }))}
-              selectedValue={selectedColor}
-              onClick={(value) => setSelectedColor(value)}
-            />
+            <div className="space-y-4">
+              {variationGroups.map((group) => (
+                <div key={group.categoryAttributeId} className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-900">{group.name}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.options.map((option) => {
+                      const isSelected =
+                        selectedOptions.get(group.categoryAttributeId) === option.attributeValueId
+                      const isAvailable = hasMatchingItem(
+                        group.categoryAttributeId,
+                        option.attributeValueId
+                      )
+                      const showColor = isHexColor(option.visualValue)
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {colorOptions.map((value) => (
-                <div
-                  key={value}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors',
-                    value === selectedColor
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  )}
-                >
-                  <span
-                    className="h-3 w-3 rounded-full border border-black/10"
-                    style={{ backgroundColor: getColorSwatch(value) }}
-                  />
-                  {value}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {keySpecs.length > 0 && (
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-violet-600" />
-              <h2 className="text-lg font-bold text-slate-950">{t.keySpecs}</h2>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {keySpecs.map((spec) => (
-                <div
-                  key={spec.label}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                >
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    {spec.label}
-                  </div>
-                  <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">
-                    {spec.values.join(' / ')}
+                      return (
+                        <button
+                          key={`${group.categoryAttributeId}-${option.attributeValueId}`}
+                          type="button"
+                          onClick={() =>
+                            handleSelectVariantOption(
+                              group.categoryAttributeId,
+                              option.attributeValueId
+                            )
+                          }
+                          disabled={!isAvailable}
+                          className={cn(
+                            'inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors',
+                            isSelected
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-200 bg-slate-50 text-slate-700',
+                            !isAvailable && 'cursor-not-allowed opacity-40'
+                          )}
+                        >
+                          {showColor ? (
+                            <span
+                              className={cn(
+                                'h-5 w-5 rounded-full border shadow-inner',
+                                isSelected ? 'border-white/60' : 'border-slate-300'
+                              )}
+                              style={{ backgroundColor: option.visualValue! }}
+                            />
+                          ) : null}
+                          <span>{option.displayValue || option.label}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
@@ -434,7 +623,7 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
                 {t.quantity}
               </div>
               <div className="mt-1 text-sm text-slate-600">
-                {selectedColor ? `${t.selected}: ${selectedColor}` : t.defaultConfig}
+                {selectedVariantSummary ? `${t.selected}: ${selectedVariantSummary}` : t.defaultConfig}
               </div>
             </div>
             <QuantitySelector
@@ -454,9 +643,9 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
                     ? `${totalPrice.toLocaleString(isEn ? 'en-US' : 'uk-UA')} ₴`
                     : t.checkPrice}
                 </div>
-                {hasDiscount && device.oldPriceUah !== null && (
+                {hasDiscount && activeOldPrice !== null && (
                   <div className="mt-1 text-sm text-white/50 line-through">
-                    {(device.oldPriceUah * quantity).toLocaleString(isEn ? 'en-US' : 'uk-UA')} ₴
+                    {(activeOldPrice * quantity).toLocaleString(isEn ? 'en-US' : 'uk-UA')} ₴
                   </div>
                 )}
               </div>
@@ -482,9 +671,9 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
               className="mt-5 h-12 w-full rounded-2xl bg-white text-base font-semibold text-slate-950 hover:opacity-90"
               onClick={handleAddToBasket}
               loading={isAdding}
-              disabled={!device.inStock}
+              disabled={!activeInStock}
             >
-              {device.inStock ? t.addToCart : t.unavailable}
+              {activeInStock ? t.addToCart : t.unavailable}
             </Button>
           </div>
         </div>

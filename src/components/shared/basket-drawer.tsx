@@ -71,14 +71,15 @@ export const BasketDrawer: React.FC<React.PropsWithChildren> = ({ children }) =>
   const currentBasket = data
   const items = currentBasket?.devices ?? []
   const uiTotalAmount = items.reduce((sum, item) => sum + getLineTotal(item), 0)
+  const getBasketItemKey = (item: IBasketDevice) => item.deviceItemId ?? item.deviceId ?? item.id
 
   const handleIncrease = async (targetItem: IBasketDevice) => {
     if (!currentBasket) return
     try {
-      setUpdatingDeviceId(targetItem.deviceId)
+      setUpdatingDeviceId(getBasketItemKey(targetItem))
       await apiBasket.updateDevice({
         basketId: currentBasket.id,
-        deviceId: targetItem.deviceId,
+        deviceItemId: targetItem.deviceItemId,
         quantity: targetItem.quantity + 1,
       })
       await queryClient.invalidateQueries({ queryKey: ['basket'] })
@@ -93,16 +94,16 @@ export const BasketDrawer: React.FC<React.PropsWithChildren> = ({ children }) =>
   const handleDecrease = async (targetItem: IBasketDevice) => {
     if (!currentBasket) return
     try {
-      setUpdatingDeviceId(targetItem.deviceId)
+      setUpdatingDeviceId(getBasketItemKey(targetItem))
       if (targetItem.quantity <= 1) {
         await apiBasket.removeDevice({
           basketId: currentBasket.id,
-          deviceId: targetItem.deviceId,
+          deviceItemId: targetItem.deviceItemId,
         })
       } else {
         await apiBasket.updateDevice({
           basketId: currentBasket.id,
-          deviceId: targetItem.deviceId,
+          deviceItemId: targetItem.deviceItemId,
           quantity: targetItem.quantity - 1,
         })
       }
@@ -118,10 +119,10 @@ export const BasketDrawer: React.FC<React.PropsWithChildren> = ({ children }) =>
   const handleRemove = async (targetItem: IBasketDevice) => {
     if (!currentBasket) return
     try {
-      setUpdatingDeviceId(targetItem.deviceId)
+      setUpdatingDeviceId(getBasketItemKey(targetItem))
       await apiBasket.removeDevice({
         basketId: currentBasket.id,
-        deviceId: targetItem.deviceId,
+        deviceItemId: targetItem.deviceItemId,
       })
       await queryClient.invalidateQueries({ queryKey: ['basket'] })
     } catch (error) {
@@ -156,21 +157,23 @@ export const BasketDrawer: React.FC<React.PropsWithChildren> = ({ children }) =>
             ) : (
               <div className="space-y-3">
                 {items.map((item) => {
-                  const isRowLoading = updatingDeviceId === item.deviceId
+                  const rowKey = getBasketItemKey(item)
+                  const isRowLoading = updatingDeviceId === rowKey
                   const product = item.device
                   const lineTotal = getLineTotal(item)
+                  const fallbackId = item.deviceId ?? item.deviceItemId
 
                   return (
                     <div key={item.id} className="rounded-2xl bg-white p-3 shadow-sm">
                       <div className="flex gap-3">
                         <img
                           src={product?.imageUrl ?? '/logo.svg'}
-                          alt={product?.nameLocalized ?? product?.name ?? `${t.itemFallback} #${item.deviceId}`}
+                          alt={product?.nameLocalized ?? product?.name ?? `${t.itemFallback} #${fallbackId}`}
                           className="h-16 w-16 rounded-xl object-cover"
                         />
                         <div className="flex-1">
                           <div className="text-sm font-semibold text-slate-900">
-                            {product?.nameLocalized ?? product?.name ?? `${t.itemFallback} #${item.deviceId}`}
+                            {product?.nameLocalized ?? product?.name ?? `${t.itemFallback} #${fallbackId}`}
                           </div>
                           <div className="mt-1 text-xs text-slate-500">
                             {product?.brand?.nameLocalized ?? product?.brand?.name ?? product?.category?.nameLocalized ?? product?.category?.name}

@@ -1,18 +1,18 @@
 import {
-  colors_data as colors,
-  features_data as features,
+  colors,
+  features,
   internalStorage, matrixTypes,
-  os_data as os, processors,
-  ram_data as ramOptions, wireless
+  os, processors,
+  ram as ramOptions, wireless
 } from "@/prisma/constants-tables"
 
 import {
   backlight as monitorBacklight,
   brand as monitorBrand,
-  diagonal_data as monitorDiagonal,
+  diagonal as monitorDiagonal,
   display_tech as monitorDisplayTech,
-  products as monitorProducts,
-  refresh_rate_data as monitorRefreshRate,
+  monitorDevices as monitorProducts,
+  refresh_rate as monitorRefreshRate,
   resolution as monitorResolution,
 } from "@/prisma/constants-monitors"
 

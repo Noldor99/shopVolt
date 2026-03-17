@@ -1,57 +1,70 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import React, { useEffect, useState } from 'react'
+import { useDebounce } from 'react-use'
 
-import { Input } from '@/components/ui/input'
-import { RangeSlider } from '@/components/ui/range-slider'
-
-import { getLocaleFromPathname, getMessages } from '@/lib/i18n'
+import { Input } from '../ui/input'
+import { RangeSlider } from '../ui/range-slider'
 
 interface Props {
-  minPrice: number
-  maxPrice: number
   minLimit: number
   maxLimit: number
-  onChange: (values: { minPrice: string | null; maxPrice: string | null }) => void
+  initialMin: number
+  initialMax: number
+  onFilterChange: (values: { minPrice: number; maxPrice: number }) => void
+  t: any
 }
 
-export const FilterPrice = ({ minPrice, maxPrice, minLimit, maxLimit, onChange }: Props) => {
-  const pathname = usePathname()
-  const locale = getLocaleFromPathname(pathname)
-  const t = getMessages(locale)
-  const normalizedMin = Math.min(Math.max(minPrice, minLimit), maxLimit)
-  const normalizedMax = Math.max(Math.min(maxPrice, maxLimit), minLimit)
+export const FilterPrice: React.FC<Props> = ({
+  minLimit,
+  maxLimit,
+  initialMin,
+  initialMax,
+  onFilterChange,
+  t,
+}) => {
+  const [prices, setPrices] = useState({ min: initialMin, max: initialMax })
 
+  // Синхронізація з URL (наприклад, при натисканні "Назад" у браузері або зміні категорії)
+  useEffect(() => {
+    setPrices({ min: initialMin, max: initialMax })
+  }, [initialMin, initialMax])
+
+  useDebounce(
+    () => {
+      if (prices.min !== initialMin || prices.max !== initialMax) {
+        // Передаємо значення з правильними іменами ключів
+        onFilterChange({
+          minPrice: prices.min,
+          maxPrice: prices.max,
+        })
+      }
+    },
+    600,
+    [prices]
+  )
   return (
     <div className="space-y-4">
-      <p className="text-sm font-bold">{t.filter.priceRange}:</p>
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <Input
           type="number"
-          min={minLimit}
-          max={maxLimit}
-          value={normalizedMin || ''}
-          onChange={(e) =>
-            onChange({ minPrice: e.target.value || null, maxPrice: String(normalizedMax) })
-          }
+          value={prices.min}
+          onChange={(e) => setPrices((prev) => ({ ...prev, min: Number(e.target.value) }))}
         />
         <Input
           type="number"
-          min={minLimit}
-          max={maxLimit}
-          value={normalizedMax || ''}
-          onChange={(e) =>
-            onChange({ minPrice: String(normalizedMin), maxPrice: e.target.value || null })
-          }
+          value={prices.max}
+          onChange={(e) => setPrices((prev) => ({ ...prev, max: Number(e.target.value) }))}
         />
       </div>
+
       <RangeSlider
         min={minLimit}
         max={maxLimit}
-        showLabels={false}
         step={1}
-        value={[normalizedMin, normalizedMax]}
-        onValueChange={([min, max]) => onChange({ minPrice: String(min), maxPrice: String(max) })}
+        value={[prices.min, prices.max]}
+        onValueChange={([min, max]) => setPrices({ min, max })}
+        showLabels={false}
       />
     </div>
   )

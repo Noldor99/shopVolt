@@ -1,9 +1,10 @@
-export const ROLES = {
-  USER: 'USER',
-  MODER: 'MODER',
-  ADMIN: 'ADMIN',
-} as const
+import { UserRole } from '@prisma/client'
 
-export type UserRole = (typeof ROLES)[keyof typeof ROLES]
+export const ADMIN_ACCESS_ROLES = [UserRole.MODER, UserRole.ADMIN] as const;
 
-export const ADMIN_ACCESS_ROLES: UserRole[] = [ROLES.MODER, ROLES.ADMIN]
+export type AdminRole = (typeof ADMIN_ACCESS_ROLES)[number];
+
+
+export const hasAdminAccess = (role?: UserRole): role is AdminRole => {
+  return !!role && (ADMIN_ACCESS_ROLES as readonly UserRole[]).includes(role);
+};

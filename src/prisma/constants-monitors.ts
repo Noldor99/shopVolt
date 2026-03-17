@@ -1,6 +1,3 @@
-
-
-
 export const brand = [
   "Samsung",
   "LG",
@@ -14,7 +11,7 @@ export const brand = [
   "Ergo"
 ]
 
-export const diagonal_data = [
+export const diagonal = [
   {
     ua: { key: "Діагональ", value: '32"' },
     en: { key: "Diagonal", value: '32"' },
@@ -67,7 +64,7 @@ export const resolution = [
   "HD ready",
   "8K"
 ]
-export const refresh_rate_data = [
+export const refresh_rate = [
   {
     ua: { key: "Частота оновлення", value: "60 Гц" },
     en: { key: "Refresh rate", value: "60 Hz" },
@@ -91,7 +88,7 @@ export const backlight = [
   "Edge LED",
   "FALD"
 ]
-export const products = [
+export const monitorDevices = [
   {
     "id": "monitor-001",
     "sku": "MON-001",
@@ -4492,11 +4489,27 @@ export const products = [
     "description": "Xiaomi 65\" монітор з технологією MicroLED, роздільною здатністю 8K та частотою 144 Гц і більше. Підійде для роботи, навчання та мультимедіа.",
     "title_en": "Xiaomi Vision 33 65\" 8K",
     "description_en": "Xiaomi 65\" monitor with MicroLED, resolution 8K and refresh rate 144 Hz and more. Suitable for work, study and multimedia.",
-    "image": "https://loremflickr.com/900/700/monitor,screen?lock=960",
+    "image": "https://content.rozetka.com.ua/goods/images/original/650551415.jpg",
     "slider_images": [
-      "https://loremflickr.com/900/700/monitor,display?lock=961",
-      "https://loremflickr.com/900/700/computer,monitor?lock=962",
-      "https://loremflickr.com/900/700/screen,workspace?lock=963"
+      "https://content1.rozetka.com.ua/goods/images/original/571562463.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/571562478.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/571562490.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/571562482.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/571562500.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/571562504.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/571562509.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/571562516.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/571562522.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/571562528.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/571562537.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/633930158.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/633930159.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/633930160.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/633930161.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/633930162.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/633930163.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/633930164.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/649128291.jpg"
     ],
     "energy_class": "B",
     "warranty_months": 24,
@@ -4521,11 +4534,21 @@ export const products = [
     "description": "TCL 75\" монітор з технологією OLED, роздільною здатністю UHD (4K) та частотою 60 Гц. Підійде для роботи, навчання та мультимедіа.",
     "title_en": "TCL Vision 34 75\" UHD (4K)",
     "description_en": "TCL 75\" monitor with OLED, resolution UHD (4K) and refresh rate 60 Hz. Suitable for work, study and multimedia.",
-    "image": "https://loremflickr.com/900/700/monitor,screen?lock=970",
     "slider_images": [
-      "https://loremflickr.com/900/700/monitor,display?lock=971",
-      "https://loremflickr.com/900/700/computer,monitor?lock=972",
-      "https://loremflickr.com/900/700/screen,workspace?lock=973"
+      "https://content1.rozetka.com.ua/goods/images/original/647473201.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473202.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473203.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473204.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473205.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473206.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473207.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473208.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473210.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473212.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473214.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473217.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473219.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473226.jpg"
     ],
     "energy_class": "A",
     "warranty_months": 24,
@@ -4550,11 +4573,27 @@ export const products = [
     "description": "Kivi 85\" монітор з технологією QLED / Quantum Dot, роздільною здатністю FullHD та частотою 100 Гц. Підійде для роботи, навчання та мультимедіа.",
     "title_en": "Kivi Vision 35 85\" FullHD",
     "description_en": "Kivi 85\" monitor with QLED / Quantum Dot, resolution FullHD and refresh rate 100 Hz. Suitable for work, study and multimedia.",
-    "image": "https://loremflickr.com/900/700/monitor,screen?lock=980",
+    "image": "https://content2.rozetka.com.ua/goods/images/original/655089098.jpg",
     "slider_images": [
-      "https://loremflickr.com/900/700/monitor,display?lock=981",
-      "https://loremflickr.com/900/700/computer,monitor?lock=982",
-      "https://loremflickr.com/900/700/screen,workspace?lock=983"
+      "https://content.rozetka.com.ua/goods/images/original/647473341.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473342.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473343.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473344.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473345.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473346.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473347.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473348.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473349.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473350.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473351.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473352.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473353.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/647473354.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473355.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/647473356.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473357.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473358.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/647473359.jpg"
     ],
     "energy_class": "A+",
     "warranty_months": 24,
@@ -4579,11 +4618,17 @@ export const products = [
     "description": "Sharp 100\" і більше монітор з технологією MiniLED, роздільною здатністю HD ready та частотою 120 Гц. Підійде для роботи, навчання та мультимедіа.",
     "title_en": "Sharp Vision 36 100\" and more HD ready",
     "description_en": "Sharp 100\" and more monitor with MiniLED, resolution HD ready and refresh rate 120 Hz. Suitable for work, study and multimedia.",
-    "image": "https://loremflickr.com/900/700/monitor,screen?lock=990",
+    "image": "https://content1.rozetka.com.ua/goods/images/original/629090420.jpg",
     "slider_images": [
-      "https://loremflickr.com/900/700/monitor,display?lock=991",
-      "https://loremflickr.com/900/700/computer,monitor?lock=992",
-      "https://loremflickr.com/900/700/screen,workspace?lock=993"
+      "https://content.rozetka.com.ua/goods/images/original/542388067.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/542388068.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/542388069.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/542388070.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/542388071.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/542388072.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/542388073.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/542388074.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/542388075.jpg"
     ],
     "energy_class": "A++",
     "warranty_months": 24,
@@ -4608,11 +4653,18 @@ export const products = [
     "description": "Ergo 32\" монітор з технологією LCD (LED), роздільною здатністю 8K та частотою 144 Гц і більше. Підійде для роботи, навчання та мультимедіа.",
     "title_en": "Ergo Vision 37 32\" 8K",
     "description_en": "Ergo 32\" monitor with LCD (LED), resolution 8K and refresh rate 144 Hz and more. Suitable for work, study and multimedia.",
-    "image": "https://loremflickr.com/900/700/monitor,screen?lock=1000",
+    "image": "https://content.rozetka.com.ua/goods/images/original/423932357.jpg",
     "slider_images": [
-      "https://loremflickr.com/900/700/monitor,display?lock=1001",
-      "https://loremflickr.com/900/700/computer,monitor?lock=1002",
-      "https://loremflickr.com/900/700/screen,workspace?lock=1003"
+      "https://content.rozetka.com.ua/goods/images/original/423932358.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/423932359.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/423932360.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/423932361.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/423932362.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/423932363.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/423932364.jpg",
+      "https://content2.rozetka.com.ua/goods/images/original/423932365.jpg",
+      "https://content1.rozetka.com.ua/goods/images/original/423932367.jpg",
+      "https://content.rozetka.com.ua/goods/images/original/423932368.jpg"
     ],
     "energy_class": "B",
     "warranty_months": 36,

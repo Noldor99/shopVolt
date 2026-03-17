@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -36,13 +37,16 @@ export const HomeSlider = ({ slides }: HomeSliderProps) => {
         navigation
         className="home-slider h-full w-full"
       >
-        {slides.map((slide) => (
+        {slides.map((slide, index) => (
           <SwiperSlide key={slide.id}>
             <div className="group/slide relative h-[320px] w-full sm:h-[420px] md:h-[480px]">
-              <img 
-                src={slide.imageUrl} 
-                alt={slide.title} 
-                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover/slide:scale-105" 
+              <Image
+                src={slide.imageUrl}
+                alt={slide.title}
+                fill
+                sizes="100vw"
+                priority={index === 0}
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover/slide:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent sm:bg-gradient-to-r sm:from-black/80 sm:via-black/40 sm:to-transparent" />
 
