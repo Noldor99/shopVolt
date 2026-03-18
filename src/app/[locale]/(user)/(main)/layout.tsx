@@ -13,11 +13,12 @@ import { Title } from '@/components/ui/title'
 import { apiCategory } from '@/actions/client/categoryAction'
 
 import { getMessages } from '@/lib/i18n'
+import type { Locale } from '@/lib/i18n'
 import { getServerQueryClient } from '@/lib/queryClient'
-import { getServerLocale } from '@/lib/server-locale'
 
 type MainLayoutProps = {
   children: ReactNode
+  params: { locale: string }
 }
 
 const getCachedCategories = unstable_cache(
@@ -28,8 +29,8 @@ const getCachedCategories = unstable_cache(
   { revalidate: 300, tags: ['categories'] }
 )
 
-const MainLayout = async ({ children }: MainLayoutProps) => {
-  const locale = await getServerLocale()
+const MainLayout = async ({ children, params }: MainLayoutProps) => {
+  const locale = params.locale as Locale
   const queryClient = getServerQueryClient()
   const t = getMessages(locale)
 

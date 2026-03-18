@@ -6,7 +6,7 @@ import { useDeleteDevice, useGetDevice } from '@/ahooks/useDevice'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 
 import { IconPencil, IconPlus } from '@tabler/icons-react'
 
@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 
 const DEVICE_LIMIT = 6
 
-const DevicesPage = () => {
+const DevicesPageClient = () => {
   const searchParams = useSearchParams()
   const page = searchParams?.get('page') || '1'
   const categoryId = searchParams?.get('categoryId')
@@ -91,4 +91,4 @@ const DevicesPage = () => {
   )
 }
 
-export default DevicesPage
+export default DevicesPageClient

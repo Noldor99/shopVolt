@@ -10,7 +10,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { QueryDeviceParams } from '@/actions/client/deviceAction'
 
 import { withLocalePath } from '@/lib/i18n'
-import { getServerLocale } from '@/lib/server-locale'
+import type { Locale } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 import { IDevicesResponse } from '@/types/device'
@@ -84,7 +84,7 @@ const fetchFeed = async ({ limit = PAGE_LIMIT, page = 1, filters = {} as DeviceF
 }
 
 export const DeviceCard = async ({ searchParams, params }: PageProps) => {
-  const locale = await getServerLocale()
+  const locale = params.locale as Locale
   const pageNumber = Number(searchParams?.page || 1)
   const limit = PAGE_LIMIT
   const page = pageNumber

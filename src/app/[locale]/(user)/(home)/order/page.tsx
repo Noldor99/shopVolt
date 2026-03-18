@@ -1,8 +1,13 @@
-import { OrderForm } from './_components/OrderForm'
-import { getServerLocale } from '@/lib/server-locale'
+import type { Locale } from '@/lib/i18n'
 
-export const generateMetadata = async () => {
-  const locale = await getServerLocale()
+import { OrderForm } from './_components/OrderForm'
+
+type OrderPageProps = {
+  params: { locale: string }
+}
+
+export const generateMetadata = async ({ params }: OrderPageProps) => {
+  const locale = params.locale as Locale
   return {
     title: locale === 'en' ? 'Checkout' : 'Оформлення замовлення',
     description:
@@ -12,8 +17,8 @@ export const generateMetadata = async () => {
   }
 }
 
-const OrderPage = async () => {
-  const locale = await getServerLocale()
+const OrderPage = async ({ params }: OrderPageProps) => {
+  const locale = params.locale as Locale
   const isEn = locale === 'en'
   return (
     <section className="py-10">

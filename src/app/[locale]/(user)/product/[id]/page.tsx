@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
-import { getServerLocale } from '@/lib/server-locale'
 import { withLocalePath, DEFAULT_LOCALE } from '@/lib/i18n'
 import type { Locale } from '@/lib/i18n'
 import type { IDevice } from '@/types/device'
@@ -26,6 +25,7 @@ const fetchDeviceById = async (id: string, locale: Locale): Promise<IDevice | nu
 
 type DevicePageProps = {
   params: {
+    locale: string
     id: string
   }
 }
@@ -44,7 +44,7 @@ export const generateStaticParams = async () => {
 }
 
 export const generateMetadata = async ({ params }: DevicePageProps): Promise<Metadata> => {
-  const locale = await getServerLocale()
+  const locale = params.locale as Locale
   const device = await fetchDeviceById(params.id, locale).catch(() => null)
 
   if (!device) {
@@ -74,7 +74,7 @@ export const generateMetadata = async ({ params }: DevicePageProps): Promise<Met
 }
 
 const DevicePage = async ({ params }: DevicePageProps) => {
-  const locale = await getServerLocale()
+  const locale = params.locale as Locale
   const device = await fetchDeviceById(params.id, locale).catch(() => null)
 
   if (!device) {

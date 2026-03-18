@@ -9,10 +9,11 @@ import { TopSubBar } from '@/components/layout/top-sub-bar'
 import { Container } from '@/components/ui/container'
 
 import { localizeCategoryName } from '@/lib/localize-entities'
-import { getServerLocale } from '@/lib/server-locale'
+import type { Locale } from '@/lib/i18n'
 
 type MainLayoutProps = {
   children: ReactNode
+  params: { locale: string }
 }
 
 type CategoryItem = {
@@ -48,15 +49,15 @@ const getCachedCategories = unstable_cache(
   { revalidate: 300, tags: ['categories'] }
 )
 
-const MainLayout = async ({ children }: MainLayoutProps) => {
-  const locale = await getServerLocale()
+const MainLayout = async ({ children, params }: MainLayoutProps) => {
+  const locale = params.locale as Locale
 
   const categories = await getCachedCategories(locale)
 
   return (
     <>
       <div className="width-max relative z-0 bg-white">
-        <TopSubBar />
+        <TopSubBar locale={locale} />
       </div>
       <TopBar
         categories={categories

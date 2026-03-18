@@ -5,7 +5,7 @@ import React, { ReactNode, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { motion, useCycle } from "framer-motion"
+import { motion, useCycle, type SVGMotionProps } from "framer-motion"
 import { SideNavItem, SIDENAV_ITEMS } from "./side-nav"
 import { IconChevronDown } from "@tabler/icons-react"
 
@@ -35,7 +35,7 @@ const sidebar = {
 
 const HeaderMobile = () => {
   const pathname = usePathname()
-  const containerRef = useRef(null)
+  const containerRef = useRef<HTMLElement | null>(null)
   const { height } = useDimensions(containerRef)
   const [isOpen, toggleOpen] = useCycle(false, true)
 
@@ -86,8 +86,11 @@ const HeaderMobile = () => {
 
 export default HeaderMobile
 
-//@ts-ignore
-const MenuToggle = ({ toggle }: { toggle }) => (
+type MenuToggleProps = {
+  toggle: () => void
+}
+
+const MenuToggle = ({ toggle }: MenuToggleProps) => (
   <button onClick={toggle} className="pointer-events-auto absolute right-4 top-[14px] z-30">
     <svg width="23" height="23" viewBox="0 0 23 23">
       <Path
@@ -113,8 +116,7 @@ const MenuToggle = ({ toggle }: { toggle }) => (
     </svg>
   </button>
 )
-//@ts-ignore
-const Path = (props) => (
+const Path = (props: SVGMotionProps<SVGPathElement>) => (
   <motion.path
     fill="transparent"
     strokeWidth="2"
@@ -200,8 +202,7 @@ const variants = {
   },
 }
 
-//@ts-ignore
-const useDimensions = (ref) => {
+const useDimensions = (ref: React.RefObject<HTMLElement | null>) => {
   const dimensions = useRef({ width: 0, height: 0 })
 
   useEffect(() => {

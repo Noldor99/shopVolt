@@ -1,18 +1,19 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 
-import { UserCabinetDrawer } from '@/app/cabinet/_components/user-cabinet-drawer'
+import { UserCabinetDrawer } from '@/app/[locale]/cabinet/_components/user-cabinet-drawer'
 
-import { getMessages } from '@/lib/i18n'
-import { getServerLocale } from '@/lib/server-locale'
+import type { Locale } from '@/lib/i18n'
 
 import { AuthDialog } from '../auth/auth-dialog'
 import { LanguageSwitcher } from '../shared/LanguageSwitcher'
 import { Container } from '../ui/container'
 
-export const TopSubBar = async () => {
-  const locale = await getServerLocale()
-  const t = getMessages(locale)
+type TopSubBarProps = {
+  locale?: Locale
+}
 
+export const TopSubBar = ({ locale = 'ua' }: TopSubBarProps) => {
+  void locale
   return (
     <Container>
       <div className="flex items-center justify-between py-2">
@@ -24,7 +25,9 @@ export const TopSubBar = async () => {
         <div className="hidden md:block" />
 
         <div className="ml-auto">
-          <LanguageSwitcher />
+          <Suspense fallback={<div className="h-7 w-[86px]" />}>
+            <LanguageSwitcher />
+          </Suspense>
         </div>
       </div>
     </Container>

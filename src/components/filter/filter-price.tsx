@@ -12,7 +12,7 @@ interface Props {
   initialMin: number
   initialMax: number
   onFilterChange: (values: { minPrice: number; maxPrice: number }) => void
-  t: any
+  t: unknown
 }
 
 export const FilterPrice: React.FC<Props> = ({

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 
 import { Suspense } from 'react'
 
-import { UserCabinetDrawer } from '@/app/cabinet/_components/user-cabinet-drawer'
+import { UserCabinetDrawer } from '@/app/[locale]/cabinet/_components/user-cabinet-drawer'
 
 import { SheetHeader } from '@/components/layout/SheetHeader'
 

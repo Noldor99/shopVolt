@@ -7,8 +7,10 @@ import { categoryPrefetch } from '@/actions/server/categoryPrefetch'
 import { devicePrefetch } from '@/actions/server/devicePrefetch'
 
 import { withLocalePath } from '@/lib/i18n'
+import type { Locale } from '@/lib/i18n'
 import { localizeCategoryName } from '@/lib/localize-entities'
-import { getServerLocale } from '@/lib/server-locale'
+import type { ICategory } from '@/types/category'
+import type { IDevicesResponse } from '@/types/device'
 
 import { HomeSlider } from './_components/home-slider'
 
@@ -103,19 +105,38 @@ const HOME_CONTENT = {
   },
 } satisfies Record<string, HomePageContent>
 
-const HomePage = async () => {
-  const locale = await getServerLocale()
+type HomePageProps = {
+  params: { locale: string }
+}
+
+const HomePage = async ({ params }: HomePageProps) => {
+  const locale = params.locale as Locale
   const isEn = locale === 'en'
-  const [categoriesRaw, devicesResponse] = await Promise.all([
-    categoryPrefetch({ lang: locale }),
-    devicePrefetch({
-      lang: locale,
-      page: 1,
-      limit: 30,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    }),
-  ])
+  const emptyDevicesResponse: IDevicesResponse = {
+    data: [],
+    pagination: { page: 1, limit: 30, total: 0, totalPages: 0 },
+  }
+
+  let categoriesRaw: ICategory[] = []
+  let devicesResponse: IDevicesResponse = emptyDevicesResponse
+
+  try {
+    ;[categoriesRaw, devicesResponse] = await Promise.all([
+      categoryPrefetch({ lang: locale }),
+      devicePrefetch({
+        lang: locale,
+        page: 1,
+        limit: 30,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      }),
+    ])
+  } catch (error) {
+    console.error('Failed to prefetch homepage data', {
+      locale,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
 
   const content = HOME_CONTENT[locale]
 

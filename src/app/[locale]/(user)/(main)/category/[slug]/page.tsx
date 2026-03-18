@@ -3,19 +3,19 @@ import type { Metadata } from 'next'
 
 import { QueryDeviceParams } from '@/actions/client/deviceAction'
 import { withLocalePath } from '@/lib/i18n'
-import { getServerLocale } from '@/lib/server-locale'
+import type { Locale } from '@/lib/i18n'
 
 import { DeviceCard } from './_components/DeviceCard'
 
 export type PageProps = {
-  params: { [key: string]: string | string[] | undefined }
+  params: { locale: string; slug?: string | string[] }
   searchParams?: QueryDeviceParams
 }
 
 export const revalidate = 120
 
 export const generateMetadata = async ({ params, searchParams }: PageProps): Promise<Metadata> => {
-  const locale = await getServerLocale()
+  const locale = params.locale as Locale
   const rawSlug = params?.slug
   const categorySlug = (Array.isArray(rawSlug) ? rawSlug[0] : rawSlug)?.trim() || ''
   const canonicalPath = withLocalePath(`/category/${categorySlug}`, locale)

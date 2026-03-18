@@ -82,7 +82,7 @@ const FilterSelect = ({
                   <CommandItem
                     key={framework}
                     value={framework}
-                    onSelect={(currentValue: any) => {
+                    onSelect={(currentValue: string) => {
                       setValue(currentValue)
                       setOpen(false)
                     }}

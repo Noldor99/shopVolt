@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const NOVA_POSHTA_API_URL = 'https://api.novaposhta.ua/v2.0/json/'
+export const dynamic = 'force-dynamic'
 
 type NovaPoshtaResponse<TData> = {
   success: boolean
