@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 
-import { DEFAULT_LOCALE, LOCALES, type Locale, getLocaleFromPathname, withLocalePath } from "@/lib/i18n"
+import { DEFAULT_LOCALE, LOCALES, type Locale, getLocaleFromPathname, stripLocaleFromPathname, withLocalePath } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 type LanguageSwitcherProps = {
@@ -14,15 +14,14 @@ export const LanguageSwitcher = ({ className, onNavigate }: LanguageSwitcherProp
   const pathname = usePathname() ?? "/"
   const searchParams = useSearchParams()
   const currentLocale = getLocaleFromPathname(pathname)
+  const basePath = stripLocaleFromPathname(pathname)
   const query = searchParams?.toString()
 
   return (
     <div className={cn("flex items-center gap-1 rounded-xl border border-black/10 p-1", className)}>
       {LOCALES.map((locale) => {
-        const nextPath = withLocalePath(pathname, locale as Locale)
-        const params = new URLSearchParams(query ?? "")
-        params.set("lang", locale)
-        const href = `${nextPath}?${params.toString()}`
+        const nextPath = withLocalePath(basePath, locale as Locale)
+        const href = query ? `${nextPath}?${query}` : nextPath
         const isActive = currentLocale === locale
         const label = locale === DEFAULT_LOCALE ? "UA" : "EN"
 

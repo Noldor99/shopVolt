@@ -27,10 +27,11 @@ export const stripLocaleFromPathname = (pathname: string | null | undefined): st
 }
 
 export const withLocalePath = (pathname: string, locale: Locale): string => {
-  if (!pathname) return `/${locale}`
+  if (!pathname) pathname = '/'
   if (!pathname.startsWith('/')) return pathname
 
   const basePath = stripLocaleFromPathname(pathname)
+  if (locale === DEFAULT_LOCALE) return basePath
   return basePath === '/' ? `/${locale}` : `/${locale}${basePath}`
 }
 

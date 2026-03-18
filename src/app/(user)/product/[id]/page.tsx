@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 
 import { getServerLocale } from '@/lib/server-locale'
+import { withLocalePath, DEFAULT_LOCALE } from '@/lib/i18n'
 import type { Locale } from '@/lib/i18n'
 import type { IDevice } from '@/types/device'
 
@@ -28,7 +30,20 @@ type DevicePageProps = {
   }
 }
 
-export const generateMetadata = async ({ params }: DevicePageProps) => {
+export const generateStaticParams = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/devices?limit=100&lang=${DEFAULT_LOCALE}`)
+    if (!response.ok) return []
+    const data = await response.json()
+    return (data.data ?? []).map((device: { id: number }) => ({
+      id: String(device.id),
+    }))
+  } catch {
+    return []
+  }
+}
+
+export const generateMetadata = async ({ params }: DevicePageProps): Promise<Metadata> => {
   const locale = await getServerLocale()
   const device = await fetchDeviceById(params.id, locale).catch(() => null)
 
@@ -40,12 +55,21 @@ export const generateMetadata = async ({ params }: DevicePageProps) => {
   }
 
   const deviceName = device.nameLocalized ?? device.name ?? device.slug
+  const canonical = withLocalePath(`/product/${device.id}`, locale)
+
   return {
     title: `${deviceName} - V3V`,
     description:
       locale === 'en'
-        ? `Configure ${deviceName} and add it to cart`
-        : `Сконфігуруйте ${deviceName} та додайте в кошик`,
+        ? `Buy ${deviceName} online at V3V. View specs, choose configuration and add to cart.`
+        : `Купити ${deviceName} онлайн в V3V. Переглянути характеристики, обрати конфігурацію та додати в кошик.`,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title: `${deviceName} - V3V`,
+      images: device.imageUrl ? [{ url: device.imageUrl }] : undefined,
+    },
   }
 }
 
