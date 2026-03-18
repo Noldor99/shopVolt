@@ -26,28 +26,6 @@ type DeviceConfiguratorProps = {
   locale?: Locale
 }
 
-const SPEC_PRIORITY = [
-  'display',
-  'screen',
-  'діагональ',
-  'diagonal',
-  'resolution',
-  'роздільна',
-  'refresh',
-  'герц',
-  'processor',
-  'процесор',
-  'chip',
-  'ram',
-  'оператив',
-  'memory',
-  'storage',
-  'накопичувач',
-  'ssd',
-  'battery',
-  'акумулятор',
-] as const
-
 const normalizeValue = (value?: string | null) => value?.trim().toLowerCase() ?? ''
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
@@ -241,7 +219,7 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
         name: group.name,
         options: [...group.options.values()],
       }))
-      .sort((left, right) => left.name.localeCompare(right.name, isEn ? 'en' : 'uk'))
+      .sort((left, right) => left.categoryAttributeId - right.categoryAttributeId)
   }, [deviceItems, isEn, locale])
 
   const variationGroups = useMemo(
@@ -284,7 +262,8 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
   )
 
   const groupedSpecs = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; values: string[] }>()
+    const map = new Map<string, { key: string; label: string; values: string[]; order: number }>()
+    let orderCursor = 0
 
     for (const item of (device.info ?? []).filter(
       (infoItem) => !variationAttributeIds.has(Number(infoItem.categoryAttributeId))
@@ -305,7 +284,7 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
           existing.values.push(value)
         }
       } else {
-        map.set(key, { key, label, values: [value] })
+        map.set(key, { key, label, values: [value], order: orderCursor++ })
       }
     }
 
@@ -325,17 +304,13 @@ export const DeviceConfigurator = ({ device, locale = 'ua' }: DeviceConfigurator
           key,
           label: group.name,
           values: [value],
+          order: orderCursor++,
         })
       }
     }
 
     return [...map.values()].sort((a, b) => {
-      const aIndex = SPEC_PRIORITY.findIndex((item) => a.key.includes(item))
-      const bIndex = SPEC_PRIORITY.findIndex((item) => b.key.includes(item))
-      const normalizedA = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex
-      const normalizedB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex
-
-      if (normalizedA !== normalizedB) return normalizedA - normalizedB
+      if (a.order !== b.order) return a.order - b.order
       return a.label.localeCompare(b.label, isEn ? 'en' : 'uk')
     })
   }, [device.info, isEn, staticPropertyGroups, variationAttributeIds])

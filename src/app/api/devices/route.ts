@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { Prisma } from "@prisma/client"
 
 import { resolveLocaleFromRequest } from "@/lib/request-locale"
 import { toSlug } from "@/lib/category-slug"
@@ -42,27 +43,6 @@ type DeviceItemInput = {
   properties?: unknown
 }
 
-type DeviceTranslationLike = {
-  locale: string
-  name: string
-  description: string | null
-}
-
-type CategoryTranslationLike = {
-  locale: string
-  name: string
-}
-
-type InfoTranslationLike = {
-  locale: string
-  value: string
-}
-
-type AttributeTranslationLike = {
-  locale: string
-  name: string
-}
-
 type NormalizedInfoItem = {
   translations: Array<{ locale: string; key: string; value: string }>
 }
@@ -81,20 +61,45 @@ const normalizeLocale = (value: unknown) => {
   return locale
 }
 
-const getPreferredTranslation = <
-  T extends { locale: string },
->(
-  items: T[] | undefined,
-  locale: string
-) => {
-  if (!items?.length) return null
-  return (
-    items.find((item) => item.locale === locale) ??
-    items.find((item) => item.locale === "ua") ??
-    items.find((item) => item.locale === "en") ??
-    items[0]
-  )
-}
+const getDeviceCardSelect = (locale: string) =>
+  ({
+    id: true,
+    slug: true,
+    imageUrl: true,
+    priceUah: true,
+    rating: true,
+    categoryId: true,
+    brandId: true,
+    translations: {
+      where: { locale },
+      select: {
+        name: true,
+        description: true,
+      },
+      take: 1,
+    },
+    category: {
+      select: {
+        id: true,
+        slug: true,
+        translations: {
+          where: { locale },
+          select: {
+            name: true,
+          },
+          take: 1,
+        },
+      },
+    },
+    brand: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
+  }) satisfies Prisma.DeviceSelect
+
+type DeviceCardRow = Prisma.DeviceGetPayload<{ select: ReturnType<typeof getDeviceCardSelect> }>
 
 const normalizeDeviceTranslations = (body: Record<string, unknown>) => {
   const raw = Array.isArray(body?.translations) ? (body.translations as TranslationInput[]) : []
@@ -486,6 +491,7 @@ export async function GET(req: NextRequest) {
     andConditions.push({
       translations: {
         some: {
+          locale,
           name: { contains: search, mode: "insensitive" },
         },
       },
@@ -573,79 +579,42 @@ export async function GET(req: NextRequest) {
       orderBy,
       skip: (page - 1) * limit,
       take: limit,
-      include: {
-        translations: true,
-        category: {
-          include: {
-            translations: true,
-          },
-        },
-        brand: true,
-        info: {
-          include: {
-            categoryAttribute: {
-              include: {
-                attribute: {
-                  include: {
-                    translations: true,
-                  },
-                },
-              },
-            },
-            attributeValue: {
-              include: {
-                translations: true,
-              },
-            },
-          },
-        },
-      },
+      select: getDeviceCardSelect(locale),
     }),
     prisma.device.count({ where }),
   ])
 
-  const data = devices.map((device: any) => {
-    const deviceTranslation = getPreferredTranslation<DeviceTranslationLike>(
-      device.translations as DeviceTranslationLike[] | undefined,
-      locale
-    )
-    const categoryTranslation = getPreferredTranslation<CategoryTranslationLike>(
-      device.category.translations as CategoryTranslationLike[] | undefined,
-      locale
-    )
+  const data = devices.map((device: DeviceCardRow) => {
+    const deviceTranslation = device.translations[0]
+    const categoryTranslation = device.category?.translations[0]
+    const localizedCategoryName = categoryTranslation?.name ?? device.category?.slug ?? ""
 
     return {
-      ...device,
       name: deviceTranslation?.name ?? device.slug,
       nameLocalized: deviceTranslation?.name ?? device.slug,
       descriptionLocalized: deviceTranslation?.description ?? null,
-      category: {
-        ...device.category,
-        nameLocalized: categoryTranslation?.name ?? device.category.slug,
-      },
+      id: device.id,
+      slug: device.slug,
+      imageUrl: device.imageUrl,
+      priceUah: device.priceUah,
+      rating: device.rating,
+      categoryId: device.categoryId,
+      brandId: device.brandId,
+      category: device.category
+        ? {
+          id: device.category.id,
+          slug: device.category.slug,
+          name: localizedCategoryName,
+          nameLocalized: localizedCategoryName,
+        }
+        : null,
       brand: device.brand
         ? {
-          ...device.brand,
+          id: device.brand.id,
+          name: device.brand.name,
           nameLocalized: device.brand.name,
         }
         : device.brand,
-      info: device.info.map((item: any) => {
-        const keyTranslation = getPreferredTranslation<AttributeTranslationLike>(
-          item.categoryAttribute?.attribute?.translations as AttributeTranslationLike[] | undefined,
-          locale
-        )
-        const valueTranslation = getPreferredTranslation<InfoTranslationLike>(
-          item.attributeValue?.translations as InfoTranslationLike[] | undefined,
-          locale
-        )
-        return {
-          ...item,
-          key: keyTranslation?.name ?? "",
-          value: valueTranslation?.value ?? "",
-          keyLocalized: keyTranslation?.name ?? "",
-          valueLocalized: valueTranslation?.value ?? "",
-        }
-      }),
     }
   })
 

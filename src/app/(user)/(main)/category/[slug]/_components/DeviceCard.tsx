@@ -1,6 +1,4 @@
-import { prisma } from '@/prisma/prisma-client'
-
-import { getServerSession } from 'next-auth'
+'use server'
 import Link from 'next/link'
 
 import { PaginationServer } from '@/components/pagination/pagination-server'
@@ -10,9 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 import { QueryDeviceParams } from '@/actions/client/deviceAction'
-import { devicePrefetch } from '@/actions/server/devicePrefetch'
 
-import { authOptions } from '@/lib/auth'
 import { withLocalePath } from '@/lib/i18n'
 import { getServerLocale } from '@/lib/server-locale'
 import { cn } from '@/lib/utils'
@@ -22,18 +18,10 @@ import { IDevicesResponse } from '@/types/device'
 import { PageProps } from '../page'
 
 const PAGE_LIMIT = 9
+const CATEGORY_FEED_REVALIDATE_SECONDS = 120
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
 type DeviceFilters = Omit<QueryDeviceParams, 'limit' | 'page'> & {
   categorySlug?: string
-}
-
-const getLocalizedDeviceType = (deviceType: string, locale: 'ua' | 'en') => {
-  const labels = {
-    TABLET: { ua: 'Планшет', en: 'Tablet' },
-    MONITOR: { ua: 'Монітор', en: 'Monitor' },
-    OTHER: { ua: 'Інше', en: 'Other' },
-  } as const
-
-  return labels[deviceType as keyof typeof labels]?.[locale] ?? deviceType
 }
 
 function buildSaveParam(
@@ -49,44 +37,54 @@ function buildSaveParam(
 }
 
 const fetchFeed = async ({ limit = PAGE_LIMIT, page = 1, filters = {} as DeviceFilters }) => {
-  let results: IDevicesResponse
+  const queryParams = new URLSearchParams()
+  queryParams.set('page', String(page))
+  queryParams.set('limit', String(limit))
+
   try {
-    results = await devicePrefetch({
-      limit,
-      page,
-      ...filters,
+    for (const [key, value] of Object.entries(filters)) {
+      if (value === undefined || value === null || value === '') continue
+      if (Array.isArray(value)) {
+        value.forEach((item) => queryParams.append(key, String(item)))
+        continue
+      }
+      queryParams.append(key, String(value))
+    }
+
+    const response = await fetch(`${API_BASE_URL}/devices?${queryParams.toString()}`, {
+      next: { revalidate: CATEGORY_FEED_REVALIDATE_SECONDS },
     })
-  } catch {
-    // External API can be unavailable in local dev; keep page render stable.
-    results = {
-      data: [],
-      pagination: {
-        page,
+
+    if (!response.ok) {
+      throw new Error(`Failed to load category devices: ${response.status}`)
+    }
+
+    const results = (await response.json()) as IDevicesResponse
+    const { totalPages } = results.pagination
+
+    return {
+      data: results,
+      paginationData: {
+        hasNextPage: page < totalPages,
+        totalPages,
         limit,
-        total: 0,
-        totalPages: 0,
+        page,
+        saveParam: [] as { [key: string]: string }[],
       },
     }
-  }
-
-  const { totalPages } = results.pagination
-
-  return {
-    data: results,
-    paginationData: {
-      hasNextPage: page < totalPages,
-      totalPages,
-      limit,
+  } catch (error) {
+    console.error('Failed to fetch category device feed', {
       page,
-      saveParam: [] as { [key: string]: string }[],
-    },
+      limit,
+      filters,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    throw error
   }
 }
 
 export const DeviceCard = async ({ searchParams, params }: PageProps) => {
   const locale = await getServerLocale()
-  const session = await getServerSession(authOptions)
-  const userId = Number((session?.user as { id?: number | string } | undefined)?.id)
   const pageNumber = Number(searchParams?.page || 1)
   const limit = PAGE_LIMIT
   const page = pageNumber
@@ -105,19 +103,6 @@ export const DeviceCard = async ({ searchParams, params }: PageProps) => {
     },
   })
   const devices = data.data ?? []
-  const favoriteIds = new Set<number>()
-
-  if (Number.isInteger(userId) && userId > 0 && devices.length > 0) {
-    const favoriteRows = await prisma.favorite.findMany({
-      where: {
-        userId,
-        deviceId: { in: devices.map((device) => device.id) },
-      },
-      select: { deviceId: true },
-    })
-
-    favoriteRows.forEach((row: { deviceId: number }) => favoriteIds.add(row.deviceId))
-  }
 
   return (
     <>
@@ -151,7 +136,7 @@ export const DeviceCard = async ({ searchParams, params }: PageProps) => {
                 </div>
                 <FavoriteButton
                   deviceId={device.id}
-                  initialIsFavorite={favoriteIds.has(device.id)}
+                  initialIsFavorite={false}
                 />
               </CardHeader>
 

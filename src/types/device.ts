@@ -83,10 +83,19 @@ export type IDeviceItem = Omit<DevicePayload["items"][number], "properties"> & {
 export type IDevice = Omit<DevicePayload, "items" | "info"> & {
   name?: string
   nameLocalized?: string
+  descriptionLocalized?: string | null
   category?: (NonNullable<DevicePayload["category"]> & { name?: string; nameLocalized?: string }) | null
   brand?: (NonNullable<DevicePayload["brand"]> & { nameLocalized?: string }) | null
   info?: IDeviceInfo[]
   items?: IDeviceItem[]
+}
+
+export type IDeviceCard = Pick<
+  IDevice,
+  "id" | "slug" | "imageUrl" | "priceUah" | "rating" | "categoryId" | "brandId" | "name" | "nameLocalized" | "descriptionLocalized"
+> & {
+  category?: { id: number; slug: string; name?: string; nameLocalized?: string } | null
+  brand?: { id: number; name: string; nameLocalized?: string } | null
 }
 
 export interface IDevicePagination {
@@ -97,7 +106,7 @@ export interface IDevicePagination {
 }
 
 export interface IDevicesResponse {
-  data: IDevice[]
+  data: IDeviceCard[]
   pagination: IDevicePagination
 }
 
