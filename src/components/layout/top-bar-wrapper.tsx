@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { apiCategory } from '@/actions/client/categoryAction'
 import { TopBar } from '@/components/layout/top-bar'
-import { ICategory } from '@/types/category'
+import type { ICategory } from '@/types/category'
 
 type TopBarWrapperProps = {
   locale: 'ua' | 'en'
