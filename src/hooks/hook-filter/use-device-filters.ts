@@ -56,7 +56,7 @@ export const useDeviceFilters = () => {
     [serverFilters]
   )
 
-  const { isSectionOpen, toggleSection } = useAccordion([])
+
 
   const getSelectedOptions = useCallback(
     (filterId: string) => {
@@ -197,14 +197,12 @@ export const useDeviceFilters = () => {
     hasActiveFilters,
     hasPriceRange,
     initialPrices,
-    isSectionOpen,
     maxLimit,
     minLimit,
     onToggleOption,
     priceRange,
     clearFilters,
     t,
-    toggleSection,
     updateQueryParams,
     handlePriceChange,
   }

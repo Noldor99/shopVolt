@@ -2,9 +2,9 @@ import { unstable_cache } from 'next/cache'
 
 import { prisma } from '@/prisma/prisma-client'
 
-import { type ReactNode } from 'react'
+import { type ReactNode, Suspense } from 'react'
 
-import { TopBar } from '@/components/layout/top-bar'
+import { TopBar, TopBarSkeleton } from '@/components/layout/top-bar'
 import { TopSubBar } from '@/components/layout/top-sub-bar'
 import { Container } from '@/components/ui/container'
 
@@ -59,22 +59,24 @@ const MainLayout = async ({ children, params }: MainLayoutProps) => {
       <div className="width-max relative z-0 bg-white">
         <TopSubBar locale={locale} />
       </div>
-      <TopBar
-        categories={categories
-          .map((category: CategoryQueryItem) => ({
-            id: category.id,
-            slug: category.slug,
-            name:
-              category.translations[0]?.name ??
-              localizeCategoryName(category.slug, category.slug, locale),
-          }))
-          .filter((c: CategoryItem) => c.name.length > 0)
-          .map((category: CategoryItem) => ({
-            ...category,
-            name: localizeCategoryName(category.slug, category.name, locale),
-          }))}
-        className="top-[53px] z-40"
-      />
+      <Suspense fallback={<TopBarSkeleton className="top-[53px] z-40" />}>
+        <TopBar
+          categories={categories
+            .map((category: CategoryQueryItem) => ({
+              id: category.id,
+              slug: category.slug,
+              name:
+                category.translations[0]?.name ??
+                localizeCategoryName(category.slug, category.slug, locale),
+            }))
+            .filter((c: CategoryItem) => c.name.length > 0)
+            .map((category: CategoryItem) => ({
+              ...category,
+              name: localizeCategoryName(category.slug, category.name, locale),
+            }))}
+          className="top-[53px] z-40"
+        />
+      </Suspense>
 
       <main className="flex-1">
         <div className="container flex w-full flex-1 items-stretch gap-6 py-6">

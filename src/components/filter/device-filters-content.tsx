@@ -5,6 +5,8 @@ import { FilterTogleGroup } from '@/components/filter/filter-togle-group'
 import CustomAccordion from '@/components/shared/custom-accordion'
 import { Button } from '@/components/ui/button'
 
+import { useAccordion } from '@/hooks/useAccordion'
+
 import { useDeviceFilters } from '../../hooks/hook-filter/use-device-filters'
 import { FilterPrice } from './filter-price'
 
@@ -15,8 +17,6 @@ type Props = {
 export const DeviceFiltersContent = ({ className }: Props) => {
   const {
     activeFilters,
-    isSectionOpen,
-    toggleSection,
     getSelectedOptions,
     onToggleOption,
     hasActiveFilters,
@@ -28,6 +28,8 @@ export const DeviceFiltersContent = ({ className }: Props) => {
     initialPrices,
     handlePriceChange,
   } = useDeviceFilters()
+
+  const { isSectionOpen, toggleSection } = useAccordion([])
 
   return (
     <div className={className}>

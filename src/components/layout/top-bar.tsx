@@ -1,21 +1,17 @@
 'use client'
 
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 import React from 'react'
 
 import { Container } from '@/components/ui/container'
 
-import {
-  getLocaleFromPathname,
-  stripLocaleFromPathname,
-  withLocalePath,
-} from '@/lib/i18n'
+import { stripLocaleFromPathname } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 import { useCategoryTotal } from '../../hooks/hook-filter/use-category-total'
 import { FilterChips } from '../filter/filter-chips'
-import { FilterTogleGroup } from '../filter/filter-togle-group'
+import { ToggleServer } from '../shared/toggle-server'
 import { SheetFilter } from './sheet-filter'
 
 type CategoryItem = {
@@ -29,40 +25,60 @@ interface Props {
   className?: string
 }
 
-export const TopBar: React.FC<Props> = ({ categories, className }) => {
-  const router = useRouter()
-  const pathname = usePathname()
+/** Static shell for Suspense while search params stream (Next.js CSR bailout). */
+export function TopBarSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn('sticky top-0 z-10 bg-white py-2 shadow-lg shadow-black/5', className)}>
+      <Container className="flex flex-col gap-2">
+        <div className="no-scrollbar flex min-h-10 items-center gap-2 overflow-x-auto">
+          <div className="h-9 w-24 shrink-0 animate-pulse rounded-full bg-zinc-100" />
+          <div className="h-9 w-20 shrink-0 animate-pulse rounded-full bg-zinc-100" />
+          <div className="h-9 w-28 shrink-0 animate-pulse rounded-full bg-zinc-100" />
+          <div className="h-9 w-24 shrink-0 animate-pulse rounded-full bg-zinc-100" />
+        </div>
+      </Container>
+    </div>
+  )
+}
 
-  const locale = getLocaleFromPathname(pathname)
+function searchParamsToParamArray(
+  searchParams: ReturnType<typeof useSearchParams>
+): { [key: string]: string }[] {
+  const arr: { [key: string]: string }[] = []
+  searchParams.forEach((value, key) => {
+    arr.push({ [key]: value })
+  })
+  return arr
+}
+
+export const TopBar: React.FC<Props> = ({ categories, className }) => {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const cleanPathname = stripLocaleFromPathname(pathname)
   const isCategoryPage = cleanPathname.startsWith('/category/')
 
-  // Знаходимо поточну активну категорію на основі URL
-  // Припускаємо, що URL має вигляд /category/slug
   const activeSlug = cleanPathname.split('/')[2]
   const totalFound = useCategoryTotal()
 
-  // Перетворюємо категорії у формат, який очікує FilterTogleGroup
   const filterItems = categories.map((cat) => ({
     text: cat.name,
     value: cat.slug,
   }))
 
-  const handleCategoryClick = (slug: string) => {
-    const href = withLocalePath(`/category/${slug}`, locale)
-    router.push(href)
-  }
+  const currentParams = searchParamsToParamArray(searchParams)
 
   return (
     <div className={cn('sticky top-0 z-10 bg-white py-2 shadow-lg shadow-black/5', className)}>
       <Container className="flex flex-col gap-2">
         <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
-          {/* Викликаємо компонент один раз, а не в циклі */}
-          <FilterTogleGroup
-            items={filterItems}
-            selectedIds={new Set(activeSlug ? [activeSlug] : [])}
-            onClickCheckbox={handleCategoryClick}
-            className="flex-row" // Щоб кнопки йшли в ряд
+          <ToggleServer
+            paramName="category"
+            isPathnameMode
+            activeValue={activeSlug}
+            currentParams={currentParams}
+            defaultArrValue={filterItems}
+            className="flex-row"
           />
         </div>
 
